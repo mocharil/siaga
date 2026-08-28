@@ -99,6 +99,12 @@ OpenClaw Gateway ──┬── Skill analyze-message (Mode A, dipicu pengguna)
 
 Python 3.11 · SQLite · OpenClaw · Telegram Bot · VPS 4 vCPU / 4 GB RAM / 20 GB SSD
 
+### OpenClaw
+- **Image:** `ghcr.io/openclaw/openclaw:2026.7.1-2`
+- **Tag:** `2026.7.1-2`
+- **Image Digest (SHA256):** `sha256:8789721d2e9b24b780a1504b56deb4c6bd5c7dbf96a1dd117e7c45c2ed72c8ac`
+- **Gateway Port:** `18789` (bound strictly to `127.0.0.1` / loopback, never expose publicly)
+
 Model: **utamakan model default yang disediakan panitia.** API sendiri hanya kalau default tidak sanggup menghasilkan JSON terstruktur yang stabil.
 
 ---
