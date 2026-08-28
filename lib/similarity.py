@@ -13,6 +13,8 @@ from pathlib import Path
 import re
 import urllib.parse
 
+from lib.homoglyph import decode_punycode, normalize as normalize_homoglyphs
+
 logger = logging.getLogger("siaga.similarity")
 
 DEFAULT_WATCHLIST_PATH = Path(__file__).resolve().parent.parent / "data" / "watchlist.csv"
@@ -23,27 +25,6 @@ DEFAULT_WATCHLIST_PATH = Path(__file__).resolve().parent.parent / "data" / "watc
 SHORT_NAME_MAX_LEN = 4           # Token length <= 4 uses exact keyword matching only
 MEDIUM_NAME_MAX_DIST = 2         # Length 5-8 allowed max edit distance
 LONG_NAME_MAX_DIST = 3           # Length > 8 allowed max edit distance
-
-# Visual Homoglyph character map (Latin lookalikes + Cyrillic lookalikes)
-HOMOGLYPH_MAP = {
-    "0": "o",
-    "1": "l",
-    "3": "e",
-    "4": "a",
-    "5": "s",
-    "8": "b",
-    # Cyrillic lookalikes
-    "\u0430": "a",  # cyrillic small a
-    "\u0441": "c",  # cyrillic small es
-    "\u0435": "e",  # cyrillic small ie
-    "\u0456": "i",  # cyrillic small byelorussian-ukrainian i
-    "\u0458": "j",  # cyrillic small je
-    "\u043e": "o",  # cyrillic small o
-    "\u0440": "p",  # cyrillic small er
-    "\u0455": "s",  # cyrillic small dze
-    "\u0445": "x",  # cyrillic small ha
-    "\u0443": "y",  # cyrillic small u
-}
 
 
 @dataclass
@@ -100,31 +81,6 @@ def damerau_levenshtein_distance(s1: str, s2: str) -> int:
         da[s1[i - 1]] = i
 
     return d[len1 + 1][len2 + 1]
-
-
-def normalize_homoglyphs(text: str) -> str:
-    """Normalize visually confusing homoglyphs and Cyrillic characters into canonical Latin."""
-    result = []
-    text_lower = text.lower()
-
-    # Normalize double-characters: rn -> m, vv -> w
-    normalized_pairs = text_lower.replace("rn", "m").replace("vv", "w")
-
-    for char in normalized_pairs:
-        result.append(HOMOGLYPH_MAP.get(char, char))
-    return "".join(result)
-
-
-def decode_punycode_domain(domain: str) -> tuple[str, bool]:
-    """Decode IDN / punycode domain (xn--) to unicode representation."""
-    is_punycode = "xn--" in domain.lower()
-    if not is_punycode:
-        return domain.lower(), False
-    try:
-        decoded = domain.encode("ascii").decode("idna")
-        return decoded.lower(), True
-    except Exception:
-        return domain.lower(), True
 
 
 def load_watchlist(csv_path: Path | str | None = None) -> list[dict[str, str]]:
@@ -208,7 +164,7 @@ def find_similar(
 
     matches: list[Match] = []
     domain_labels = _extract_domain_labels(clean_domain)
-    decoded_domain, is_punycode = decode_punycode_domain(clean_domain)
+    decoded_domain, is_punycode = decode_punycode(clean_domain)
     homoglyph_domain = normalize_homoglyphs(decoded_domain)
     homoglyph_labels = _extract_domain_labels(homoglyph_domain)
 
