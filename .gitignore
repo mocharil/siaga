@@ -1,0 +1,8 @@
+.env
+*.db
+*.db-journal
+data/raw/
+eval_errors_*.json
+__pycache__/
+*.log
+.venv/
