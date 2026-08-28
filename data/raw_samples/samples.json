@@ -1,0 +1,82 @@
+[
+  {
+    "id": "sample_01_bca_tarif",
+    "text": "SURAT PEMBERITAHUAN RESMI BCA: Mulai besok tarif transaksi antar bank berubah jadi Rp 150.000/bulan. Jika Anda tidak setuju dengan kenaikan tarif ini dan ingin tetap pakai tarif lama Rp 6.500, segera isi formulir pembatalan di hxxps://bca-perubahantarif[.]online/batal sebelum pukul 23:59 WIB malam ini atau sistem otomatis menyetujui!",
+    "expected_urgency": 2,
+    "expected_false_authority": 2,
+    "expected_prize_bait": 0,
+    "expected_dangerous_request": ["pin", "otp", "password"]
+  },
+  {
+    "id": "sample_02_undangan_apk",
+    "text": "Kepada Yth Bapak/Ibu, Kami bermaksud mengundang ke acara resepsi pernikahan kami. Mohon doa restunya, detail undangan digital ada di file Surat_Undangan_Pernikahan.apk terlampir. Mohon diinstall dan dibuka ya bapak ibu.",
+    "expected_urgency": 1,
+    "expected_false_authority": 0,
+    "expected_prize_bait": 0,
+    "expected_dangerous_request": ["apk"]
+  },
+  {
+    "id": "sample_03_kurir_paket_apk",
+    "text": "J&T Express: Paket dengan nomor resi JNT8891230 tidak dapat diantar karena alamat kurang lengkap. Mohon unduh aplikasi Cek_Resi_JT.apk untuk update titik koordinat rumah Anda hari ini agar paket tidak diretur.",
+    "expected_urgency": 2,
+    "expected_false_authority": 2,
+    "expected_prize_bait": 0,
+    "expected_dangerous_request": ["apk"]
+  },
+  {
+    "id": "sample_04_dana_kaget",
+    "text": "SELAMAT! Nomor Anda terpilih mendapatkan saldo DANA KAGET spesial kemerdekaan sebesar Rp 2.500.000! Kuota tersisa untuk 5 orang tercepat. Klaim sekarang juga di link berikut: dana-kaget.vip/klaim25jt sebelum hangus!",
+    "expected_urgency": 2,
+    "expected_false_authority": 1,
+    "expected_prize_bait": 3,
+    "expected_dangerous_request": ["otp", "transfer", "pin"]
+  },
+  {
+    "id": "sample_05_tagihan_pln",
+    "text": "PERINGATAN PEMUTUSAN LISTRIK PLN: Tagihan listrik IDPEL 532100987654 menunggak. Petugas lapangan akan melakukan pemutusan hari ini jam 15.00. Hindari denda dan pemutusan dengan konfirmasi pembayaran via WA di wa.me/6285811223344 atau link pln-pembayaran.xyz/bayar.",
+    "expected_urgency": 3,
+    "expected_false_authority": 2,
+    "expected_prize_bait": 0,
+    "expected_dangerous_request": ["transfer"]
+  },
+  {
+    "id": "sample_06_surat_tilang_etle",
+    "text": "KEPOLISIAN NEGARA REPUBLIK INDONESIA - KORLANTAS: Kendaraan Anda tertangkap kamera ETLE melanggar batas kecepatan di Tol Dalam Kota. Surat tilang dan foto bukti pelanggaran resmi dapat dilihat di lampiran Surat_Tilang_ETLE_Polri.apk. Harap segera konfirmasi dalam 1x24 jam.",
+    "expected_urgency": 2,
+    "expected_false_authority": 3,
+    "expected_prize_bait": 0,
+    "expected_dangerous_request": ["apk"]
+  },
+  {
+    "id": "sample_07_cs_bri_otp",
+    "text": "Customer Care Bank BRI: Terdeteksi upaya login akun BRImo dari perangkat asing di Surabaya. Demi keamanan rekening, kami telah membekukan sementara kartu Anda. Balas pesan ini dengan 6 angka kode OTP yang dikirimkan melalui SMS untuk verifikasi bahwa ini adalah Anda.",
+    "expected_urgency": 3,
+    "expected_false_authority": 2,
+    "expected_prize_bait": 0,
+    "expected_dangerous_request": ["otp"]
+  },
+  {
+    "id": "sample_08_loker_parttime",
+    "text": "Halo kak! Kami dari agensi Shopee Mall sedang membuka lowongan kerja freelance online tanpa modal, gaji Rp 300.000 - Rp 1.500.000 per hari. Tugasnya hanya like dan subscribe produk. Silakan transfer biaya deposit awal Rp 50.000 ke Rekening Mandiri 1370012345678 untuk aktivasi akun pekerja.",
+    "expected_urgency": 1,
+    "expected_false_authority": 1,
+    "expected_prize_bait": 2,
+    "expected_dangerous_request": ["transfer"]
+  },
+  {
+    "id": "sample_09_legit_bca",
+    "text": "m-BCA: 28/08 14:30:12 TRSF E-BANKING DB 50.000,00 KE 1234567890 BUDI SETIAWAN. Saldo akhir Rp 1.250.000,00. Hubungi HaloBCA 1500888 jika tidak merasa melakukan transaksi ini.",
+    "expected_urgency": 0,
+    "expected_false_authority": 0,
+    "expected_prize_bait": 0,
+    "expected_dangerous_request": ["none"]
+  },
+  {
+    "id": "sample_10_legit_tokopedia",
+    "text": "Hai Budi, pesananmu dengan nomor invoice INV/20260828/MPL/987654321 sedang dalam perjalanan menuju alamat tujuan oleh kurir JNE (Resi: JNE001928374). Pantau posisi kurir secara real-time langsung melalui aplikasi Tokopedia.",
+    "expected_urgency": 0,
+    "expected_false_authority": 0,
+    "expected_prize_bait": 0,
+    "expected_dangerous_request": ["none"]
+  }
+]
