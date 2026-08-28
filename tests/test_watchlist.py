@@ -15,6 +15,24 @@ def test_watchlist_file_exists():
     assert WATCHLIST_PATH.exists(), f"Watchlist file not found at {WATCHLIST_PATH}"
 
 
+def test_watchlist_header_and_count():
+    """Watchlist must contain valid headers and at least 50 entries."""
+    with open(WATCHLIST_PATH, mode="r", encoding="utf-8") as f:
+        reader = csv.DictReader(f)
+        expected_headers = [
+            "brand_name",
+            "aliases",
+            "official_domain",
+            "category",
+            "match_mode",
+            "source",
+        ]
+        assert reader.fieldnames == expected_headers, f"Headers mismatch: {reader.fieldnames}"
+
+        rows = list(reader)
+        assert len(rows) >= 50, f"Expected >= 50 rows, got {len(rows)}"
+
+
 def test_watchlist_strict_column_count_raw():
     """Verify with raw csv.reader that EVERY row has exactly 6 columns (catches unquoted commas)."""
     with open(WATCHLIST_PATH, mode="r", encoding="utf-8") as f:
