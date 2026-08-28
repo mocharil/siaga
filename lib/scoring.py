@@ -21,6 +21,7 @@ from lib.extract import ExtractedEntities, extract_entities
 from lib.llm import analyze_linguistics
 from lib.rdap import DomainInfo, lookup
 from lib.redirect import RedirectTrace, trace
+from lib.similarity import find_similar
 
 logger = logging.getLogger("siaga.scoring")
 
@@ -346,13 +347,12 @@ def analyze_message(
         tech_signals["tld"] = tld
         tech_signals["is_risky_tld"] = tld in RISKY_TLDS
 
-        # Check brand name mentions in non-official domain (e.g. bca-update.xyz)
-        domain_labels = domain.replace("-", ".").split(".")
-        for kw in KNOWN_OFFICIAL_KEYWORDS:
-            if kw in domain_labels and not domain.endswith(f".{kw}.co.id") and not domain.endswith(f".{kw}.com"):
-                tech_signals["watchlist_matched"] = True
-                tech_signals["matched_brand"] = kw.upper()
-                break
+        # Check brand similarity against 200+ institution watchlist
+        sim_matches = find_similar(domain)
+        if sim_matches:
+            tech_signals["watchlist_matched"] = True
+            tech_signals["matched_brand"] = sim_matches[0].brand_name
+            tech_signals["similarity_method"] = sim_matches[0].method
 
         # Query RDAP
         rdap_info = lookup(domain, db_path=resolved_db)
