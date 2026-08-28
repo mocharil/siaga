@@ -58,6 +58,7 @@ CREATE TABLE IF NOT EXISTS ct_raw (
     id              INTEGER PRIMARY KEY,
     domain          TEXT NOT NULL,
     first_seen      TIMESTAMP NOT NULL,
+    not_before      TIMESTAMP,
     source          TEXT,
     processed_at    TIMESTAMP,
     UNIQUE(domain)
@@ -81,11 +82,19 @@ CREATE TABLE IF NOT EXISTS collector_runs (
 
 
 def init_db(db_path: Path) -> sqlite3.Connection:
-    """Create database and tables if they don't exist."""
+    """Create database and tables if they don't exist, and migrate schema if needed."""
     db_path.parent.mkdir(parents=True, exist_ok=True)
     conn = sqlite3.connect(str(db_path))
     conn.execute("PRAGMA journal_mode=WAL")
     conn.executescript(SCHEMA_SQL)
+
+    # In-place migration: ensure `not_before` column exists in `ct_raw`
+    cursor = conn.execute("PRAGMA table_info(ct_raw)")
+    columns = [row[1] for row in cursor.fetchall()]
+    if "not_before" not in columns:
+        conn.execute("ALTER TABLE ct_raw ADD COLUMN not_before TIMESTAMP")
+        logger.info("Migrated ct_raw: added not_before column")
+
     conn.commit()
     return conn
 
@@ -186,18 +195,19 @@ def _fetch_from_ctlogs(
     since: datetime,
     tlds: list[str],
     api_key: Optional[str] = None,
-) -> tuple[list[str], int, int]:
+) -> tuple[list[tuple[str, datetime]], int, int, int]:
     """
-    Fetch domains from ctlogs.dev for the given TLDs.
+    Fetch domains and their not_before timestamps from ctlogs.dev for the given TLDs.
 
-    Returns (domains, successful_tlds, failed_tlds).
+    Returns (domains_with_nb, successful_tlds, partial_tlds, failed_tlds).
     """
-    all_domains: set[str] = set()
+    all_domains: dict[str, datetime] = {}
     successful_tlds = 0
+    partial_tlds = 0
     failed_tlds = 0
 
     for tld in tlds:
-        tld_domains: set[str] = set()
+        tld_domains: dict[str, datetime] = {}
         url = f"{CTLOGS_BASE_URL}/v1/subdomains/{tld}"
         page_num = 0
         reached_cutoff = False
@@ -240,7 +250,11 @@ def _fetch_from_ctlogs(
                 if match_domain:
                     normalized = normalize_domain(match_domain)
                     if normalized:
-                        tld_domains.add(normalized)
+                        if (
+                            normalized not in tld_domains
+                            or not_before > tld_domains[normalized]
+                        ):
+                            tld_domains[normalized] = not_before
 
             if reached_cutoff:
                 logger.info(
@@ -268,15 +282,22 @@ def _fetch_from_ctlogs(
             page_num += 1
             time.sleep(REQUEST_DELAY_SECONDS)
 
-        if tld_failed and not tld_domains:
-            failed_tlds += 1
+        if tld_failed:
+            if tld_domains:
+                partial_tlds += 1
+            else:
+                failed_tlds += 1
         else:
             successful_tlds += 1
-            all_domains.update(tld_domains)
+
+        for d, nb in tld_domains.items():
+            if d not in all_domains or nb > all_domains[d]:
+                all_domains[d] = nb
 
         time.sleep(REQUEST_DELAY_SECONDS)
 
-    return list(all_domains), successful_tlds, failed_tlds
+    result = [(d, nb) for d, nb in all_domains.items()]
+    return result, successful_tlds, partial_tlds, failed_tlds
 
 
 # ---------------------------------------------------------------------------
@@ -284,7 +305,9 @@ def _fetch_from_ctlogs(
 # ---------------------------------------------------------------------------
 
 
-def _fetch_from_crtsh(since: datetime) -> tuple[list[str], int, int]:
+def _fetch_from_crtsh(
+    since: datetime,
+) -> tuple[list[tuple[str, datetime]], str]:
     """Fallback: fetch from crt.sh.  Not yet implemented."""
     raise NotImplementedError("crt.sh fallback not yet implemented")
 
@@ -296,9 +319,9 @@ def _fetch_from_crtsh(since: datetime) -> tuple[list[str], int, int]:
 
 def fetch_recent_domains(
     since: datetime, source: str = "ctlogs_id"
-) -> tuple[list[str], str]:
+) -> tuple[list[tuple[str, datetime]], str]:
     """
-    Fetch domains from CT logs issued since *since*.
+    Fetch domains and their not_before timestamps from CT logs issued since *since*.
 
     Args:
         since:  Only include certificates with not_before >= since.
@@ -307,23 +330,23 @@ def fetch_recent_domains(
                 "crtsh_id"  — crt.sh fallback (reserved)
 
     Returns:
-        (domains, status) where status is "ok" | "partial" | "failed".
+        (domain_records, status) where status is "ok" | "partial" | "failed".
     """
     api_key = os.environ.get("CTLOGS_API_KEY")
 
     if source == "ctlogs_id":
-        domains, ok_tlds, fail_tlds = _fetch_from_ctlogs(
+        records, ok_tlds, partial_tlds, fail_tlds = _fetch_from_ctlogs(
             since, CTLOGS_ID_TLDS, api_key
         )
-        if ok_tlds > 0 and fail_tlds == 0:
-            return domains, "ok"
-        elif ok_tlds > 0:
-            return domains, "partial"
+        if ok_tlds > 0 and partial_tlds == 0 and fail_tlds == 0:
+            return records, "ok"
+        elif ok_tlds > 0 or partial_tlds > 0:
+            return records, "partial"
         else:
-            return domains, "failed"
+            return records, "failed"
 
     elif source == "crtsh_id":
-        return _fetch_from_crtsh(since)  # type: ignore[return-value]
+        return _fetch_from_crtsh(since)
 
     else:
         raise ValueError(f"Unknown source: {source}")
@@ -363,16 +386,21 @@ def main() -> None:
     try:
         count_before = conn.execute("SELECT COUNT(*) FROM ct_raw").fetchone()[0]
 
-        domains, fetch_status = fetch_recent_domains(since, source)
-        fetched = len(domains)
+        records, fetch_status = fetch_recent_domains(since, source)
+        fetched = len(records)
         status = fetch_status
 
         now_iso = started_at.isoformat()
-        for domain in domains:
+        for domain, not_before in records:
+            nb_iso = (
+                not_before.isoformat()
+                if isinstance(not_before, datetime)
+                else not_before
+            )
             conn.execute(
-                "INSERT OR IGNORE INTO ct_raw (domain, first_seen, source) "
-                "VALUES (?, ?, ?)",
-                (domain, now_iso, source),
+                "INSERT OR IGNORE INTO ct_raw (domain, first_seen, not_before, source) "
+                "VALUES (?, ?, ?, ?)",
+                (domain, now_iso, nb_iso, source),
             )
         conn.commit()
 

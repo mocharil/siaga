@@ -21,6 +21,7 @@ from collector.ct_collector import (
     init_db,
     record_run,
     _fetch_from_ctlogs,
+    fetch_recent_domains,
 )
 
 
@@ -132,14 +133,19 @@ class TestCtlogsResponseParsing:
         mock_fetch.return_value = MOCK_CTLOGS_RESPONSE_PAGE1
         since = datetime(2026, 8, 27, 6, 0, 0, tzinfo=timezone.utc)
 
-        domains, ok, fail = _fetch_from_ctlogs(since, ["co.id"])
+        records, ok, partial, fail = _fetch_from_ctlogs(since, ["co.id"])
+        domains = [d for d, _ in records]
+        domain_dict = dict(records)
 
         # Only the two domains newer than `since` should appear.
         # The third (2026-08-27T01:00:00Z) is before cutoff.
         assert "mandiri-login.co.id" in domains  # wildcard stripped
         assert "bankbca-online.co.id" in domains
         assert "legit-company.co.id" not in domains
+        assert domain_dict["mandiri-login.co.id"] == datetime(2026, 8, 28, 6, 0, 0, tzinfo=timezone.utc)
+        assert domain_dict["bankbca-online.co.id"] == datetime(2026, 8, 28, 5, 0, 0, tzinfo=timezone.utc)
         assert ok == 1
+        assert partial == 0
         assert fail == 0
 
     @patch("collector.ct_collector._ctlogs_fetch_page")
@@ -182,12 +188,15 @@ class TestCtlogsResponseParsing:
         mock_fetch.side_effect = [page1, page2]
         since = datetime(2026, 8, 27, 6, 0, 0, tzinfo=timezone.utc)
 
-        domains, ok, fail = _fetch_from_ctlogs(since, ["co.id"])
+        records, ok, partial, fail = _fetch_from_ctlogs(since, ["co.id"])
+        domains = [d for d, _ in records]
 
         assert "page1.co.id" in domains
         assert "page2.co.id" in domains
         assert mock_fetch.call_count == 2
         assert ok == 1
+        assert partial == 0
+        assert fail == 0
 
     @patch("collector.ct_collector._ctlogs_fetch_page")
     def test_tld_failure_recorded(self, mock_fetch):
@@ -195,11 +204,57 @@ class TestCtlogsResponseParsing:
         mock_fetch.return_value = None  # both attempts fail
         since = datetime(2026, 8, 27, 6, 0, 0, tzinfo=timezone.utc)
 
-        domains, ok, fail = _fetch_from_ctlogs(since, ["co.id"])
+        records, ok, partial, fail = _fetch_from_ctlogs(since, ["co.id"])
 
-        assert domains == []
+        assert records == []
         assert ok == 0
+        assert partial == 0
         assert fail == 1
+
+    @patch("collector.ct_collector._ctlogs_fetch_page")
+    def test_tld_partial_failure_recorded(self, mock_fetch):
+        """If a TLD fetches some pages but fails midway, it's counted as partial."""
+        page1 = {
+            "rows": [
+                {
+                    "id": "p1",
+                    "match": "partial-domain.co.id",
+                    "not_before": "2026-08-28T06:00:00Z",
+                    "not_after": "2026-11-28T06:00:00Z",
+                    "serial_hex": "aa",
+                    "issuer": "LE",
+                    "key_algo": "ECDSA P-256",
+                    "san_count": 1,
+                }
+            ],
+            "has_next": True,
+            "next_cursor": "CURSOR_NEXT",
+            "duration_ms": 10,
+        }
+        # page 1 succeeds, page 2 fails (returns None on first try and on retry)
+        mock_fetch.side_effect = [page1, None, None]
+        since = datetime(2026, 8, 27, 6, 0, 0, tzinfo=timezone.utc)
+
+        records, ok, partial, fail = _fetch_from_ctlogs(since, ["co.id"])
+        domains = [d for d, _ in records]
+
+        assert "partial-domain.co.id" in domains
+        assert ok == 0
+        assert partial == 1
+        assert fail == 0
+
+    @patch("collector.ct_collector._fetch_from_ctlogs")
+    def test_fetch_recent_domains_partial_status(self, mock_fetch):
+        """fetch_recent_domains must return 'partial' status when a TLD is partial."""
+        since = datetime(2026, 8, 27, 6, 0, 0, tzinfo=timezone.utc)
+        mock_fetch.return_value = (
+            [("partial.co.id", datetime.now(timezone.utc))],
+            1,  # ok_tlds
+            1,  # partial_tlds
+            0,  # fail_tlds
+        )
+        _, status = fetch_recent_domains(since, "ctlogs_id")
+        assert status == "partial"
 
     @patch("collector.ct_collector._ctlogs_fetch_page")
     def test_deduplication_across_tlds(self, mock_fetch):
@@ -223,14 +278,17 @@ class TestCtlogsResponseParsing:
         since = datetime(2026, 8, 27, 6, 0, 0, tzinfo=timezone.utc)
 
         # Query two TLDs that both return the same domain
-        domains, ok, fail = _fetch_from_ctlogs(since, ["co.id", "id"])
+        records, ok, partial, fail = _fetch_from_ctlogs(since, ["co.id", "or.id"])
+        domains = [d for d, _ in records]
 
         assert domains.count("shared.co.id") == 1
         assert ok == 2
+        assert partial == 0
+        assert fail == 0
 
 
 # ---------------------------------------------------------------------------
-# Database: init + idempotency
+# Database: init + idempotency + migration
 # ---------------------------------------------------------------------------
 
 
@@ -251,17 +309,73 @@ class TestDatabase:
         }
         assert "ct_raw" in tables
         assert "collector_runs" in tables
+        columns = [r[1] for r in db.execute("PRAGMA table_info(ct_raw)").fetchall()]
+        assert "not_before" in columns
+
+    def test_not_before_stored_and_retrieved(self, db):
+        """not_before is stored and retrieved correctly."""
+        now = "2026-08-28T12:00:00+00:00"
+        nb = "2026-08-28T04:30:00+00:00"
+        db.execute(
+            "INSERT OR IGNORE INTO ct_raw (domain, first_seen, not_before, source) "
+            "VALUES (?, ?, ?, ?)",
+            ("sample.co.id", now, nb, "ctlogs_id"),
+        )
+        db.commit()
+        row = db.execute(
+            "SELECT domain, first_seen, not_before, source FROM ct_raw WHERE domain='sample.co.id'"
+        ).fetchone()
+        assert row[0] == "sample.co.id"
+        assert row[1] == now
+        assert row[2] == nb
+        assert row[3] == "ctlogs_id"
+
+    def test_migration_alter_table_idempotent(self, tmp_path):
+        """init_db on a legacy DB without not_before column migrates it cleanly, and running again is safe."""
+        db_path = tmp_path / "legacy.db"
+        conn = sqlite3.connect(str(db_path))
+        # Create legacy table without not_before
+        conn.execute("""
+        CREATE TABLE ct_raw (
+            id INTEGER PRIMARY KEY,
+            domain TEXT NOT NULL,
+            first_seen TIMESTAMP NOT NULL,
+            source TEXT,
+            processed_at TIMESTAMP,
+            UNIQUE(domain)
+        );
+        """)
+        conn.execute("INSERT INTO ct_raw (domain, first_seen, source) VALUES ('legacy.id', '2026-08-28T00:00:00', 'ctlogs_id')")
+        conn.commit()
+        conn.close()
+
+        # First run of init_db migrates
+        conn1 = init_db(db_path)
+        cols1 = [r[1] for r in conn1.execute("PRAGMA table_info(ct_raw)").fetchall()]
+        assert "not_before" in cols1
+        # Check existing row preserved with not_before = NULL
+        legacy_row = conn1.execute("SELECT domain, not_before FROM ct_raw WHERE domain='legacy.id'").fetchone()
+        assert legacy_row[0] == "legacy.id"
+        assert legacy_row[1] is None
+        conn1.close()
+
+        # Second run of init_db is safe
+        conn2 = init_db(db_path)
+        cols2 = [r[1] for r in conn2.execute("PRAGMA table_info(ct_raw)").fetchall()]
+        assert cols2.count("not_before") == 1
+        conn2.close()
 
     def test_insert_idempotent(self, db):
         """INSERT OR IGNORE must not duplicate domains."""
         now = datetime.now(timezone.utc).isoformat()
+        nb = (datetime.now(timezone.utc) - timedelta(hours=2)).isoformat()
         db.execute(
-            "INSERT OR IGNORE INTO ct_raw (domain, first_seen, source) VALUES (?, ?, ?)",
-            ("test.co.id", now, "ctlogs_id"),
+            "INSERT OR IGNORE INTO ct_raw (domain, first_seen, not_before, source) VALUES (?, ?, ?, ?)",
+            ("test.co.id", now, nb, "ctlogs_id"),
         )
         db.execute(
-            "INSERT OR IGNORE INTO ct_raw (domain, first_seen, source) VALUES (?, ?, ?)",
-            ("test.co.id", now, "ctlogs_id"),
+            "INSERT OR IGNORE INTO ct_raw (domain, first_seen, not_before, source) VALUES (?, ?, ?, ?)",
+            ("test.co.id", now, nb, "ctlogs_id"),
         )
         db.commit()
         count = db.execute("SELECT COUNT(*) FROM ct_raw WHERE domain='test.co.id'").fetchone()[0]
@@ -271,13 +385,14 @@ class TestDatabase:
         """Second insert for same domain must NOT update first_seen."""
         early = "2026-08-28T01:00:00+00:00"
         late = "2026-08-28T12:00:00+00:00"
+        nb = "2026-08-27T23:00:00+00:00"
         db.execute(
-            "INSERT OR IGNORE INTO ct_raw (domain, first_seen, source) VALUES (?, ?, ?)",
-            ("preserve.co.id", early, "ctlogs_id"),
+            "INSERT OR IGNORE INTO ct_raw (domain, first_seen, not_before, source) VALUES (?, ?, ?, ?)",
+            ("preserve.co.id", early, nb, "ctlogs_id"),
         )
         db.execute(
-            "INSERT OR IGNORE INTO ct_raw (domain, first_seen, source) VALUES (?, ?, ?)",
-            ("preserve.co.id", late, "ctlogs_id"),
+            "INSERT OR IGNORE INTO ct_raw (domain, first_seen, not_before, source) VALUES (?, ?, ?, ?)",
+            ("preserve.co.id", late, nb, "ctlogs_id"),
         )
         db.commit()
         stored = db.execute(
@@ -318,9 +433,11 @@ class TestNegativeCases:
         """Empty rows list should not crash."""
         mock_fetch.return_value = {"rows": [], "has_next": False}
         since = datetime(2026, 8, 27, 6, 0, 0, tzinfo=timezone.utc)
-        domains, ok, fail = _fetch_from_ctlogs(since, ["co.id"])
-        assert domains == []
+        records, ok, partial, fail = _fetch_from_ctlogs(since, ["co.id"])
+        assert records == []
         assert ok == 1  # successful but empty is ok, not failed
+        assert partial == 0
+        assert fail == 0
 
     @patch("collector.ct_collector._ctlogs_fetch_page")
     def test_malformed_not_before(self, mock_fetch):
@@ -341,7 +458,10 @@ class TestNegativeCases:
             "has_next": False,
         }
         since = datetime(2026, 8, 27, 6, 0, 0, tzinfo=timezone.utc)
-        domains, ok, fail = _fetch_from_ctlogs(since, ["co.id"])
+        records, ok, partial, fail = _fetch_from_ctlogs(since, ["co.id"])
         # bad date → skipped, not crash
+        domains = [d for d, _ in records]
         assert "bad.co.id" not in domains
         assert ok == 1
+        assert partial == 0
+        assert fail == 0
