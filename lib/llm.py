@@ -18,7 +18,11 @@ import ssl
 import urllib.error
 import urllib.request
 
+from dotenv import load_dotenv
 import jsonschema
+
+# Automatically load .env from project root if present
+load_dotenv(Path(__file__).resolve().parent.parent / ".env")
 
 logger = logging.getLogger("siaga.llm")
 
@@ -294,12 +298,58 @@ def complete(
     ) from last_error
 
 
+def _heuristic_linguistic_fallback(text: str) -> dict:
+    """Rule-based heuristic fallback for linguistic analysis when LLM API key is unconfigured."""
+    lower = text.lower()
+    dangerous: list[str] = []
+    if any(k in lower for k in ["otp", "one time password", "kode sms", "kode verifikasi"]):
+        dangerous.append("otp")
+    if any(k in lower for k in ["pin", "mpin", "pin atm"]):
+        dangerous.append("pin")
+    if any(k in lower for k in ["password", "kata sandi", "passcode"]):
+        dangerous.append("password")
+    if any(k in lower for k in [".apk", "apk", "install", "unduh aplikasi"]):
+        dangerous.append("apk")
+    if any(k in lower for k in ["transfer", "rekening", "deposit", "biaya admin"]):
+        dangerous.append("transfer")
+    if not dangerous:
+        dangerous.append("none")
+
+    urgency = 0
+    if any(k in lower for k in ["segera", "malam ini", "1x24 jam", "sebelum pukul", "blokir", "darurat", "otomatis"]):
+        urgency = 2 if any(k in lower for k in ["blokir", "otomatis", "darurat", "sebelum pukul"]) else 1
+
+    false_authority = 0
+    if any(k in lower for k in ["bca", "bri", "mandiri", "bni", "djp", "pajak", "polri", "pln", "kemenkeu", "ojk", "bi"]):
+        false_authority = 2 if any(k in lower for k in ["surat", "resmi", "pemberitahuan", "peringatan", "customer care"]) else 1
+
+    prize_bait = 0
+    if any(k in lower for k in ["selamat", "menang", "dana kaget", "hadiah", "undian", "gratis", "bonus"]):
+        prize_bait = 3 if any(k in lower for k in ["rp", "juta", "2.500", "pemenang"]) else 2
+
+    return {
+        "urgency": urgency,
+        "false_authority": false_authority,
+        "prize_bait": prize_bait,
+        "dangerous_request": dangerous,
+        "reasoning": "Analisis linguistik berbasis aturan heuristik (LLM offline).",
+    }
+
+
 def analyze_linguistics(
     text: str,
     db_path: Path | str | None = None,
     model: str | None = None,
 ) -> dict:
-    """Convenience helper to analyze message linguistics using standard prompt and schema."""
+    """Convenience helper to analyze message linguistics using standard prompt and schema.
+
+    Falls back to deterministic heuristic parsing if LLM API key is unconfigured.
+    """
+    api_key = os.getenv("LLM_API_KEY") or os.getenv("OPENAI_API_KEY")
+    if not api_key:
+        logger.info("LLM_API_KEY is not configured; using heuristic linguistic analysis fallback.")
+        return _heuristic_linguistic_fallback(text)
+
     prompt_file = Path(__file__).resolve().parent.parent / "prompts" / "linguistic_analysis.txt"
     if prompt_file.exists():
         template = prompt_file.read_text(encoding="utf-8")
@@ -310,9 +360,13 @@ def analyze_linguistics(
             f"Kembalikan JSON dengan urgency, false_authority, prize_bait, dangerous_request, reasoning."
         )
 
-    return complete(
-        prompt=prompt,
-        schema=LINGUISTIC_SCHEMA,
-        db_path=db_path,
-        model=model,
-    )
+    try:
+        return complete(
+            prompt=prompt,
+            schema=LINGUISTIC_SCHEMA,
+            db_path=db_path,
+            model=model,
+        )
+    except LLMProviderError as e:
+        logger.warning("LLM provider call failed (%s); using heuristic linguistic fallback.", e)
+        return _heuristic_linguistic_fallback(text)
