@@ -286,6 +286,43 @@ class TestCtlogsResponseParsing:
         assert partial == 0
         assert fail == 0
 
+    @patch("collector.ct_collector._ctlogs_fetch_page")
+    def test_earliest_not_before_retained_on_duplicate_domain(self, mock_fetch):
+        """When the same domain appears multiple times with different not_before, the earliest is retained."""
+        resp = {
+            "rows": [
+                {
+                    "id": "cert-new",
+                    "match": "duplicate.co.id",
+                    "not_before": "2026-08-28T08:00:00Z",  # newer
+                    "not_after": "2026-11-28T08:00:00Z",
+                    "serial_hex": "1111",
+                    "issuer": "LE",
+                    "key_algo": "ECDSA P-256",
+                    "san_count": 1,
+                },
+                {
+                    "id": "cert-old",
+                    "match": "duplicate.co.id",
+                    "not_before": "2026-08-28T02:00:00Z",  # earlier
+                    "not_after": "2026-11-28T02:00:00Z",
+                    "serial_hex": "2222",
+                    "issuer": "LE",
+                    "key_algo": "ECDSA P-256",
+                    "san_count": 1,
+                },
+            ],
+            "has_next": False,
+        }
+        mock_fetch.return_value = resp
+        since = datetime(2026, 8, 27, 6, 0, 0, tzinfo=timezone.utc)
+
+        records, ok, partial, fail = _fetch_from_ctlogs(since, ["co.id"])
+        domain_dict = dict(records)
+
+        assert "duplicate.co.id" in domain_dict
+        assert domain_dict["duplicate.co.id"] == datetime(2026, 8, 28, 2, 0, 0, tzinfo=timezone.utc)
+
 
 # ---------------------------------------------------------------------------
 # Database: init + idempotency + migration

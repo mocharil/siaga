@@ -252,7 +252,7 @@ def _fetch_from_ctlogs(
                     if normalized:
                         if (
                             normalized not in tld_domains
-                            or not_before > tld_domains[normalized]
+                            or not_before < tld_domains[normalized]
                         ):
                             tld_domains[normalized] = not_before
 
@@ -291,7 +291,7 @@ def _fetch_from_ctlogs(
             successful_tlds += 1
 
         for d, nb in tld_domains.items():
-            if d not in all_domains or nb > all_domains[d]:
+            if d not in all_domains or nb < all_domains[d]:
                 all_domains[d] = nb
 
         time.sleep(REQUEST_DELAY_SECONDS)
