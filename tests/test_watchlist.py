@@ -15,22 +15,18 @@ def test_watchlist_file_exists():
     assert WATCHLIST_PATH.exists(), f"Watchlist file not found at {WATCHLIST_PATH}"
 
 
-def test_watchlist_header_and_count():
-    """Watchlist must contain valid headers and at least 50 entries."""
+def test_watchlist_strict_column_count_raw():
+    """Verify with raw csv.reader that EVERY row has exactly 6 columns (catches unquoted commas)."""
     with open(WATCHLIST_PATH, mode="r", encoding="utf-8") as f:
-        reader = csv.DictReader(f)
-        expected_headers = [
-            "brand_name",
-            "aliases",
-            "official_domain",
-            "category",
-            "match_mode",
-            "source",
-        ]
-        assert reader.fieldnames == expected_headers, f"Headers mismatch: {reader.fieldnames}"
+        raw_reader = csv.reader(f)
+        header = next(raw_reader)
+        expected_cols = len(header)
+        assert expected_cols == 6, f"Expected 6 header columns, got {expected_cols}: {header}"
 
-        rows = list(reader)
-        assert len(rows) >= 50, f"Expected >= 50 rows, got {len(rows)}"
+        for line_num, row in enumerate(raw_reader, start=2):
+            assert len(row) == expected_cols, (
+                f"Row {line_num} has {len(row)} columns instead of {expected_cols} (likely unquoted comma in field): {row}"
+            )
 
 
 def test_watchlist_row_validity():
@@ -42,6 +38,7 @@ def test_watchlist_row_validity():
         seen_domains = set()
 
         for idx, row in enumerate(reader, start=2):
+            assert None not in row, f"Row {idx}: has excess columns {row[None]}"
             brand = row["brand_name"].strip()
             aliases = row["aliases"].strip()
             domain = row["official_domain"].strip()
