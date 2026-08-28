@@ -1,0 +1,63 @@
+brand_name,aliases,official_domain,category,match_mode,source
+Bank Central Asia,BCA;Bank BCA;myBCA;KlikBCA,bca.co.id,bank,keyword_only,OJK Direktori Bank Umum / DNS: 34.110.245.177
+Bank Rakyat Indonesia,BRI;Bank BRI;BRImo,bri.co.id,bank,keyword_only,OJK Direktori Bank Umum / DNS: 45.60.105.181
+Bank Mandiri,Mandiri;Bank Mandiri;Livin by Mandiri;Livin Mandiri,bankmandiri.co.id,bank,edit_distance,OJK Direktori Bank Umum / DNS: 16.78.166.17
+Bank Negara Indonesia,BNI;Bank BNI;BNI Mobile;wondr,bni.co.id,bank,keyword_only,OJK Direktori Bank Umum / DNS: 45.223.65.109
+Bank Syariah Indonesia,BSI;Bank BSI;BSI Mobile;BYOND,bankbsi.co.id,bank,keyword_only,OJK Direktori Bank Umum / DNS: 45.223.170.70
+Bank Tabungan Negara,BTN;Bank BTN;BTN Mobile;Bale by BTN,btn.co.id,bank,keyword_only,OJK Direktori Bank Umum / DNS: 45.223.65.109
+CIMB Niaga,CIMB;Bank CIMB Niaga;OCTO Mobile;OCTO Clicks,cimbniaga.co.id,bank,keyword_only,OJK Direktori Bank Umum / DNS: 45.60.46.215
+Bank Danamon,Danamon;Bank Danamon;D-Bank PRO,danamon.co.id,bank,edit_distance,OJK Direktori Bank Umum / DNS: 222.229.87.160
+Permata Bank,Permata;Bank Permata;PermataME;PermataMobile X,permatabank.com,bank,edit_distance,OJK Direktori Bank Umum / DNS: 202.191.2.12
+Bank Mega,Mega;Bank Mega;M-Smile,bankmega.com,bank,keyword_only,OJK Direktori Bank Umum / DNS: 159.60.142.64
+OCBC Indonesia,OCBC;OCBC NISP;Bank OCBC;ONe Mobile,ocbc.id,bank,keyword_only,OJK Direktori Bank Umum / DNS: 45.60.36.152
+Panin Bank,Panin;Bank Panin;Panin Mobile,panin.co.id,bank,edit_distance,OJK Direktori Bank Umum / DNS: 114.10.52.187 (www.panin.co.id) [CATATAN: apex panin.co.id tanpa A record; web resmi aktif di www.panin.co.id]
+Bank BTPN,BTPN;Bank BTPN;BTPN Sinaya,btpn.com,bank,keyword_only,OJK Direktori Bank Umum / DNS: 103.10.146.77
+Jenius,Jenius;Jenius BTPN;Jenius App,jenius.com,bank,edit_distance,BTPN Digital Banking / DNS: 172.67.153.65
+Bank Jago,Jago;Bank Jago;Jago Syariah,jago.com,bank,keyword_only,OJK Direktori Bank Umum / DNS: 172.64.148.24
+BCA Digital,Blu;blu by BCA Digital;blu BCA,blubybcadigital.id,bank,keyword_only,BCA Digital / DNS: 202.6.212.169
+SeaBank Indonesia,SeaBank;Bank Seabank;Shopee Bank,seabank.co.id,bank,edit_distance,OJK Direktori Bank Umum / DNS: 103.153.169.5
+Bank Neo Commerce,BNC;Neo Bank;Bank Neo;Neobank,bankneocommerce.co.id,bank,keyword_only,OJK Direktori Bank Umum / DNS: 147.139.187.247
+Bank BJB,BJB;Bank Jabar Banten;DIGI by bank bjb,bankbjb.co.id,bank,keyword_only,OJK Direktori BPD / DNS: 103.93.246.40
+Bank Jatim,Jatim;Bank Jatim;JConnect Mobile,bankjatim.co.id,bank,edit_distance,OJK Direktori BPD / DNS: 192.124.249.10
+Bank Jateng,Jateng;Bank Jateng;Bima Mobile,bankjateng.co.id,bank,edit_distance,OJK Direktori BPD / DNS: 36.66.184.7
+Bank DKI,DKI;Bank DKI;JakOne Mobile,bankdki.co.id,bank,keyword_only,OJK Direktori BPD / DNS: 103.89.4.252
+Bank Aladin Syariah,Aladin;Bank Aladin;Aladin Bank,aladinbank.id,bank,edit_distance,OJK Direktori Bank Umum / DNS: 34.101.179.106
+Superbank Indonesia,Superbank;Bank Fama,superbank.id,bank,edit_distance,OJK Direktori Bank Umum / DNS: 15.232.87.21
+Maybank Indonesia,Maybank;Bank Maybank;M2U ID,maybank.co.id,bank,edit_distance,OJK Direktori Bank Umum / DNS: 103.247.183.76
+UOB Indonesia,UOB;Bank UOB;TMRW by UOB,uob.co.id,bank,keyword_only,OJK Direktori Bank Umum / DNS: 180.250.61.139
+HSBC Indonesia,HSBC;Bank HSBC,hsbc.co.id,bank,keyword_only,OJK Direktori Bank Umum / DNS: 3.173.23.238
+DANA Indonesia,DANA;Dompet Digital DANA;DANA ID,dana.id,bank,keyword_only,BI Penyelenggara Jasa Pembayaran / DNS: 147.139.163.15
+OVO,OVO;OVO Cash;OVO ID;PT Visionet Internasional,ovo.id,bank,keyword_only,BI Penyelenggara Jasa Pembayaran / DNS: 108.137.192.80
+GoPay Indonesia,GoPay;Gopay ID;GoTo Financial,gopay.co.id,bank,edit_distance,BI Penyelenggara Jasa Pembayaran / DNS: 155.102.100.6
+LinkAja,LinkAja;Link Aja;Finarya;TCASH,linkaja.id,bank,edit_distance,BI Penyelenggara Jasa Pembayaran / DNS: 18.136.12.104
+Shopee Indonesia,Shopee;ShopeePay;Shopee ID;SPayLater,shopee.co.id,ecommerce,edit_distance,PANDI / DNS: 147.136.168.96
+Tokopedia,Tokopedia;Tokped;GoTo,tokopedia.com,ecommerce,edit_distance,PANDI / DNS: 47.74.244.18
+Bukalapak,Bukalapak;BukaLapak;BL,bukalapak.com,ecommerce,keyword_only,Kominfo PSE / DNS: 151.101.131.52
+Blibli,Blibli;Blibli.com;PT Global Digital Niaga,blibli.com,ecommerce,edit_distance,Kominfo PSE / DNS: 104.18.5.182
+Lazada Indonesia,Lazada;Lazada ID,lazada.co.id,ecommerce,edit_distance,PANDI / DNS: 47.246.165.72
+Traveloka,Traveloka;Traveloka PayLater,traveloka.com,ecommerce,edit_distance,Kominfo PSE / DNS: 3.168.203.17
+Tiket.com,Tiket;Tiketcom;PT Global Tiket Network,tiket.com,ecommerce,edit_distance,Kominfo PSE / DNS: 34.98.93.77
+Zalora Indonesia,Zalora;Zalora ID,zalora.co.id,ecommerce,edit_distance,PANDI / DNS: 13.248.243.181
+Akulaku,Akulaku;Akulaku PayLater;PT Akulaku Finance,akulaku.com,ecommerce,edit_distance,OJK Fintech Lending / DNS: 8.219.198.81
+Kredivo,Kredivo;Kredivo PayLater;FinAccel,kredivo.com,ecommerce,edit_distance,OJK Fintech Lending / DNS: 18.67.111.108
+Direktorat Jenderal Pajak,DJP;Pajak;DJP Online;e-Faktur;e-Billing;M-Pajak,pajak.go.id,pemerintah,keyword_only,Kemenkeu / DNS: 103.28.106.146
+BPJS Kesehatan,BPJS;BPJS Kesehatan;Mobile JKN;JKN Mobile;JKN,bpjs-kesehatan.go.id,pemerintah,keyword_only,Kemenkominfo / DNS: 159.60.137.38
+BPJS Ketenagakerjaan,BPJSTK;BPJS Ketenagakerjaan;JMO;Jamsostek,bpjsketenagakerjaan.go.id,pemerintah,edit_distance,Kemenkominfo / DNS: 34.149.206.15
+Perusahaan Listrik Negara,PLN;PLN Mobile;Listrik Pintar;Token Listrik,pln.co.id,pemerintah,keyword_only,BUMN / DNS: 119.252.170.162
+Pertamina,Pertamina;MyPertamina;Pertamina Patra Niaga,pertamina.com,pemerintah,edit_distance,BUMN / DNS: 20.247.144.109
+Telkomsel,Telkomsel;MyTelkomsel;SimPATI;Kartu Halo;by.U,telkomsel.com,pemerintah,edit_distance,BUMN Telkom Group / DNS: 43.255.199.21
+Indosat Ooredoo Hutchison,Indosat;IM3;Tri Indonesia;IOH;myIM3;bima+,ioh.co.id,pemerintah,keyword_only,Kominfo / DNS: 114.5.30.131
+Kementerian Komunikasi dan Digital,Komdigi;Kominfo;Kemenkominfo;Kominfo RI,komdigi.go.id,pemerintah,edit_distance,Pemerintah RI / DNS: 118.98.95.195 [CATATAN: rebranding resmi 2024 dari kominfo.go.id ke komdigi.go.id]
+Ditjen Dukcapil Kemendagri,Dukcapil;IKD;Identitas Kependudukan Digital;KTP Digital;e-KTP,dukcapil.kemendagri.go.id,pemerintah,edit_distance,Kemendagri / DNS: 36.66.118.179
+SatuSehat Kemenkes,SatuSehat;PeduliLindungi;Kemenkes,satusehat.kemkes.go.id,pemerintah,edit_distance,Kemenkes RI / DNS: 104.18.27.173
+Direktorat Jenderal Imigrasi,Imigrasi;M-Paspor;Paspor Online;e-VoA,imigrasi.go.id,pemerintah,edit_distance,Kemenkumham / DNS: 54.192.164.119
+Kepolisian Negara Republik Indonesia,Polri;Polisi;Korlantas;SINAR SIM;ETLE;SKCK Online,polri.go.id,pemerintah,keyword_only,Polri / DNS: 146.88.246.92
+JNE Express,JNE;Jalur Nugraha Ekakurir;MyJNE,jne.co.id,logistik,keyword_only,Asperindo / DNS: 110.239.68.51
+J&T Express,J&T;J&T Express;JET;JNT,jet.co.id,logistik,keyword_only,Asperindo / DNS: 172.66.166.226
+SiCepat Ekspres,SiCepat;Sicepat;SiCepat Ekspres;SiCepat Klik,sicepat.com,logistik,edit_distance,Asperindo / DNS: 128.1.176.167
+Pos Indonesia,Pos Indonesia;POS;PosPay;PosAja;Kantor Pos,posindonesia.co.id,logistik,keyword_only,BUMN / DNS: 16.79.88.8
+Anteraja,Anteraja;AnterAja;Triputra Logistik,anteraja.id,logistik,edit_distance,Asperindo / DNS: 3.0.24.193
+Ninja Xpress,Ninja Xpress;Ninja Van;Ninja Express,ninjaxpress.id,logistik,edit_distance,Asperindo / DNS: 2.57.91.91 [CATATAN: domain resmi www.ninjaxpress.id, domain regional ninjaxpress.co]
+Citra Van Titipan Kilat,TIKI;Tiki;Titipan Kilat,tiki.id,logistik,keyword_only,Asperindo / DNS: 13.215.187.162
+Lion Parcel,Lion Parcel;Lion Express;Lion Air Group Logistik,lionparcel.com,logistik,edit_distance,Lion Air Group / DNS: 54.251.253.199
+Wahana Express,Wahana;Wahana Prestasi Logistik;Wahana Express,wahana.com,logistik,edit_distance,Asperindo / DNS: 103.184.179.114
