@@ -2,8 +2,9 @@
 
 from __future__ import annotations
 
-import sqlite3
 import json
+import logging
+import sqlite3
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from unittest.mock import patch, MagicMock
@@ -22,6 +23,7 @@ from collector.ct_collector import (
     record_run,
     _fetch_from_ctlogs,
     fetch_recent_domains,
+    setup_logging,
 )
 
 
@@ -502,3 +504,25 @@ class TestNegativeCases:
         assert ok == 1
         assert partial == 0
         assert fail == 0
+
+
+# ---------------------------------------------------------------------------
+# Logging
+# ---------------------------------------------------------------------------
+
+
+class TestLogging:
+    def test_setup_logging_creates_file_and_writes_logs(self, tmp_path):
+        """setup_logging creates parent dirs, log file, and records log messages."""
+        log_file = tmp_path / "subdir" / "collector.log"
+        logger = setup_logging(log_file)
+        assert log_file.exists()
+
+        logger.info("Test log message: %s", "hello-siaga")
+
+        # Flush handlers to ensure file content is written
+        for h in logging.getLogger().handlers:
+            h.flush()
+
+        content = log_file.read_text(encoding="utf-8")
+        assert "Test log message: hello-siaga" in content

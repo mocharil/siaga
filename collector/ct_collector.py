@@ -15,6 +15,7 @@ from __future__ import annotations
 
 import json
 import logging
+from logging.handlers import RotatingFileHandler
 import os
 import sqlite3
 import sys
@@ -41,13 +42,47 @@ REQUEST_TIMEOUT_SECONDS = 30
 MAX_PAGES_PER_TLD = 200  # Safety: 200 pages * 100 rows = 20k per TLD
 USER_AGENT = "SIAGA-CT-Collector/0.1 (security research)"
 
-DB_PATH = Path(__file__).resolve().parent.parent / "data" / "siaga.db"
+BASE_DIR = Path(__file__).resolve().parent.parent
+DB_PATH = BASE_DIR / "data" / "siaga.db"
+LOG_DIR = BASE_DIR / "logs"
+LOG_PATH = LOG_DIR / "collector.log"
 
 # ---------------------------------------------------------------------------
 # Logging
 # ---------------------------------------------------------------------------
 
 logger = logging.getLogger("ct_collector")
+
+
+def setup_logging(log_path: Path) -> logging.Logger:
+    """Configure root logger to write to both stdout and a rotating log file."""
+    log_path.parent.mkdir(parents=True, exist_ok=True)
+    root_logger = logging.getLogger()
+    root_logger.setLevel(logging.INFO)
+    root_logger.handlers.clear()
+
+    formatter = logging.Formatter(
+        "%(asctime)s [%(levelname)s] %(message)s",
+        datefmt="%Y-%m-%d %H:%M:%S",
+    )
+
+    # Console / stdout handler
+    console_handler = logging.StreamHandler(sys.stdout)
+    console_handler.setFormatter(formatter)
+    root_logger.addHandler(console_handler)
+
+    # Rotating file handler: 5MB per file, max 5 backup files (mode='a')
+    file_handler = RotatingFileHandler(
+        str(log_path),
+        maxBytes=5 * 1024 * 1024,
+        backupCount=5,
+        encoding="utf-8",
+        mode="a",
+    )
+    file_handler.setFormatter(formatter)
+    root_logger.addHandler(file_handler)
+
+    return logging.getLogger("ct_collector")
 
 # ---------------------------------------------------------------------------
 # Database
@@ -358,11 +393,8 @@ def fetch_recent_domains(
 
 
 def main() -> None:
-    logging.basicConfig(
-        level=logging.INFO,
-        format="%(asctime)s [%(levelname)s] %(message)s",
-        datefmt="%Y-%m-%d %H:%M:%S",
-    )
+    log_path = Path(os.environ.get("SIAGA_LOG_PATH", str(LOG_PATH)))
+    setup_logging(log_path)
 
     source = os.environ.get("CT_SOURCE", "ctlogs_id")
     db_path = Path(os.environ.get("SIAGA_DB_PATH", str(DB_PATH)))
@@ -372,7 +404,7 @@ def main() -> None:
 
     logger.info("=" * 60)
     logger.info("SIAGA CT Collector — starting")
-    logger.info("Source: %s | DB: %s", source, db_path)
+    logger.info("Source: %s | DB: %s | Log: %s", source, db_path, log_path)
     logger.info("Window: %s → %s", since.isoformat(), started_at.isoformat())
     logger.info("=" * 60)
 
@@ -428,8 +460,22 @@ def main() -> None:
 
     conn.close()
 
-    # --- Print summary ---
+    # --- Print and log summary ---
     duration = (finished_at - started_at).total_seconds()
+    duplicates = fetched - inserted_new
+
+    # Structured summary line written to log file and console
+    logger.info(
+        "SUMMARY: timestamp=%s source=%s fetched=%d inserted_new=%d duplicates=%d status=%s duration=%.1fs",
+        finished_at.isoformat(),
+        source,
+        fetched,
+        inserted_new,
+        duplicates,
+        status,
+        duration,
+    )
+
     print()
     print("=" * 50)
     print(f"  SIAGA CT Collector — {status.upper()}")
@@ -438,7 +484,7 @@ def main() -> None:
     print(f"  Duration   : {duration:.1f}s")
     print(f"  Fetched    : {fetched}")
     print(f"  New inserts: {inserted_new}")
-    print(f"  Duplicates : {fetched - inserted_new}")
+    print(f"  Duplicates : {duplicates}")
     if error_message:
         print(f"  Error      : {error_message}")
     print("=" * 50)
