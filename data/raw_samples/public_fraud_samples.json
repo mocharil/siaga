@@ -1,0 +1,272 @@
+[
+  {
+    "id": "fraud_001_bca_tarif",
+    "category": "perbankan_tarif",
+    "target_brand": "BCA",
+    "label": "phishing",
+    "text": "SURAT PEMBERITAHUAN RESMI BANK BCA: Terkait peningkatan sistem perbankan, tarif transaksi transfer antar bank akan disesuaikan menjadi Rp 150.000 per bulan mulai besok. Bagi nasabah yang ingin tetap menggunakan skema tarif normal Rp 6.500 per transaksi, silakan batalkan perubahan tarif melalui formulir resmi di hxxps://bca-tarifpromo[.]online/batal sebelum pukul 23:59 WIB malam ini.",
+    "attack_vector": "credential_phishing",
+    "requested_actions": ["link_click", "pin_input"]
+  },
+  {
+    "id": "fraud_002_bri_undian_brimo",
+    "category": "undian_palsu",
+    "target_brand": "BRI",
+    "label": "phishing",
+    "text": "Selamat! Nomor rekening BRImo Anda terpilih mendapatkan Grand Prize 1 unit Mobil Honda Brio dari Program Undian Panen Rejeki Simpedes 2026. Untuk pencairan hadiah tanpa dipungut biaya, segera hubungi Customer Service dan isi formulir klaim di hxxp://gebyar-brimo[.]vip/klaim-pemenang atau WhatsApp ke 081299887766.",
+    "attack_vector": "credential_phishing",
+    "requested_actions": ["link_click", "otp_input"]
+  },
+  {
+    "id": "fraud_003_mandiri_blokir_akun",
+    "category": "perbankan_ancaman",
+    "target_brand": "Mandiri",
+    "label": "phishing",
+    "text": "Peringatan Keamanan Livin by Mandiri: Terdeteksi aktivitas masuk mencurigakan dari IP asing di lokasi Medan. Untuk mencegah pengurasan saldo, sistem kami akan memblokir permanen rekening Anda dalam 30 menit. Jika ini bukan Anda, segera lakukan verifikasi identitas di hxxps://livin-mandiri[.]secure-auth[.]xyz/verifikasi sekarang juga.",
+    "attack_vector": "credential_phishing",
+    "requested_actions": ["link_click", "password_input"]
+  },
+  {
+    "id": "fraud_004_etle_polri_apk",
+    "category": "malware_apk",
+    "target_brand": "Polri",
+    "label": "phishing",
+    "text": "KEPOLISIAN NEGARA REPUBLIK INDONESIA - KORLANTAS POLRI: Kendaraan bermotor Anda tertangkap kamera tilang ETLE melanggar rambu marka jalan. Surat tilang elektronik dan foto bukti pelanggaran resmi dapat Anda buka melalui dokumen digital terlampir Surat_Tilang_ETLE.apk. Mohon segera dipasang dan dikonfirmasi dalam 1x24 jam.",
+    "attack_vector": "apk_malware",
+    "requested_actions": ["apk_install"]
+  },
+  {
+    "id": "fraud_005_undangan_nikah_apk",
+    "category": "malware_apk",
+    "target_brand": "General",
+    "label": "phishing",
+    "text": "Assalamu'alaikum Wr Wb. Tanpa mengurangi rasa hormat, perkenankan kami mengundang Bapak/Ibu/Saudara/i untuk menghadiri acara pernikahan putra-putri kami. Untuk denah lokasi dan waktu acara selengkapnya ada di dalam file Undangan_Digital_Resepsi.apk. Mohon kehadirannya ya.",
+    "attack_vector": "apk_malware",
+    "requested_actions": ["apk_install"]
+  },
+  {
+    "id": "fraud_006_kurir_jne_paket_apk",
+    "category": "malware_apk",
+    "target_brand": "JNE Express",
+    "label": "phishing",
+    "text": "JNE Express: Paket atas nama Anda dengan nomor resi JNE8821901 tertahan di drop point karena nomor rumah tidak terbaca kurir. Silakan install aplikasi tracking resi LIHAT_FOTO_PAKET.apk untuk konfirmasi alamat pengantaran ulang hari ini.",
+    "attack_vector": "apk_malware",
+    "requested_actions": ["apk_install"]
+  },
+  {
+    "id": "fraud_007_kurir_jnt_paket_apk",
+    "category": "malware_apk",
+    "target_brand": "J&T Express",
+    "label": "phishing",
+    "text": "J&T Express Cargo: Paket kiriman Anda rusak/basah di gudang sortir. Kurir butuh persetujuan ganti rugi Anda. Buka file Dokumen_Klaim_Ganti_Rugi.apk berikut untuk verifikasi penerimaan dana kompensasi.",
+    "attack_vector": "apk_malware",
+    "requested_actions": ["apk_install"]
+  },
+  {
+    "id": "fraud_008_dana_kaget_saldo",
+    "category": "dana_kaget",
+    "target_brand": "DANA",
+    "label": "phishing",
+    "text": "HORE! Anda mendapat kiriman DANA Kaget sebesar Rp 1.850.000 dari program Berkah Ramadhan DANA Indonesia. Kuota terbatas hanya untuk 10 orang tercepat. Ambil amplop digital Anda sekarang di link: dana-kaget.site/amplop-1850jt sebelum kedaluwarsa!",
+    "attack_vector": "credential_phishing",
+    "requested_actions": ["link_click", "otp_input"]
+  },
+  {
+    "id": "fraud_009_shopee_paylater_poin",
+    "category": "ecommerce_reward",
+    "target_brand": "Shopee",
+    "label": "phishing",
+    "text": "Shopee Indonesia: 5.000 Koin Shopee & Limit SPayLater Anda Rp 15.000.000 akan hangus malam ini karena jarang transaksi. Segera cairkan koin menjadi saldo ShopeePay melalui portal resmi di hxxps://shopeepay-reward[.]online/klaim.",
+    "attack_vector": "credential_phishing",
+    "requested_actions": ["link_click", "pin_input"]
+  },
+  {
+    "id": "fraud_010_pln_pemutusan_listrik",
+    "category": "utilitas_ancaman",
+    "target_brand": "PLN",
+    "label": "phishing",
+    "text": "PERINGATAN PEMUTUSAN METERAN PLN: ID Pelanggan 521098231012 menunggak denda keterlambatan Rp 245.000. Petugas kami akan memutus aliran listrik hari ini pukul 14.00. Hubungi bagian penagihan via WhatsApp di wa.me/6281355443322 atau lunasi di pln-online[.]top/bayar.",
+    "attack_vector": "social_engineering_transfer",
+    "requested_actions": ["transfer", "link_click"]
+  },
+  {
+    "id": "fraud_011_djp_pajak_coretax_apk",
+    "category": "pemerintah_pajak",
+    "target_brand": "Direktorat Jenderal Pajak",
+    "label": "phishing",
+    "text": "DIREKTORAT JENDERAL PAJAK: Pemberitahuan Surat Kurang Bayar Pajak Penghasilan (PPh) Tahun Pajak 2025. Rincian Surat Tagihan Pajak (STP) dan kode billing resmi terlampir di file e-Faktur_Coretax_DJP.apk. Unduh dan laporkan segera.",
+    "attack_vector": "apk_malware",
+    "requested_actions": ["apk_install"]
+  },
+  {
+    "id": "fraud_012_kominfo_blokir_sim",
+    "category": "pemerintah_telekomunikasi",
+    "target_brand": "Kominfo",
+    "label": "phishing",
+    "text": "KEMKOMINFO RI: Kartu SIM seluler Anda belum melakukan registrasi ulang biometrik sesuai regulasi UU Telekomunikasi terbaru. Nomor Anda akan dinonaktifkan permanen malam ini. Registrasi instan di web: kemkominfo-verifikasi[.]xyz/sim.",
+    "attack_vector": "credential_phishing",
+    "requested_actions": ["link_click", "ktp_input"]
+  },
+  {
+    "id": "fraud_013_loker_parttime_shopee",
+    "category": "loker_scam",
+    "target_brand": "Shopee",
+    "label": "phishing",
+    "text": "Halo kak! Kami dari Agensi Mitra Merchant Shopee Mall membuka lowongan freelance paruh waktu kerja dari rumah (WFH). Cukup selesaikan misi like produk, komisi Rp 200.000 - Rp 800.000/hari langsung cair. Untuk aktivasi ID kerja, silakan transfer uang jaminan deposit Rp 50.000 ke Rekening BCA: 8820192831 a/n PT Mitra Sukses.",
+    "attack_vector": "social_engineering_transfer",
+    "requested_actions": ["transfer"]
+  },
+  {
+    "id": "fraud_014_loker_freelance_tiktok",
+    "category": "loker_scam",
+    "target_brand": "TikTok Shop",
+    "label": "phishing",
+    "text": "Lowongan Kerja Online TikTok Shop Affiliate: Dapatkan penghasilan tambahan Rp 500.000/hari hanya dengan menonton dan memberi review video produk. Gabung grup bimbingan VIP di t.me/tiktok_freelance_indo dan hubungi admin kami untuk pendaftaran.",
+    "attack_vector": "social_engineering_telegram",
+    "requested_actions": ["telegram_join", "transfer"]
+  },
+  {
+    "id": "fraud_015_crypto_titip_dana",
+    "category": "investasi_bodong",
+    "target_brand": "General Crypto",
+    "label": "phishing",
+    "text": "INVESTASI TITIP DANA TRADING KRIPTO & FOREX: Modal Rp 500.000 profit Rp 7.500.000 dalam 6 jam. Dijamin 100% amanah dan diawasi OJK & Bappebti. Testimoni penarikan member live setiap hari. Minat gabung hubungi WhatsApp admin di 085711223344.",
+    "attack_vector": "social_engineering_transfer",
+    "requested_actions": ["transfer"]
+  },
+  {
+    "id": "fraud_016_bpjs_bansos_bsu",
+    "category": "pemerintah_bansos",
+    "target_brand": "BPJS Ketenagakerjaan",
+    "label": "phishing",
+    "text": "BPJS KETENAGAKERJAAN: Anda terdaftar sebagai penerima Bantuan Subsidi Upah (BSU) tahap ke-2 senilai Rp 1.200.000. Cek nomor kepesertaan Anda dan tautkan rekening penerima di link: bpjs-subsidi[.]site/cek-rekening.",
+    "attack_vector": "credential_phishing",
+    "requested_actions": ["link_click", "bank_account_input"]
+  },
+  {
+    "id": "fraud_017_bni_mobile_wondr_update",
+    "category": "perbankan_tarif",
+    "target_brand": "BNI",
+    "label": "phishing",
+    "text": "Pemberitahuan Nasabah BNI: Terkait migrasi sistem aplikasi wondr by BNI, nasabah wajib memperbarui data akun sebelum tanggal 30. Akses portal pembaruan di hxxps://bni-wondr[.]live/update dan masukkan nomor kartu ATM beserta PIN Anda.",
+    "attack_vector": "credential_phishing",
+    "requested_actions": ["link_click", "pin_input"]
+  },
+  {
+    "id": "fraud_018_bsi_mobile_migrasi",
+    "category": "perbankan_ancaman",
+    "target_brand": "BSI",
+    "label": "phishing",
+    "text": "Bank Syariah Indonesia (BSI): Layanan BSI Mobile Anda terdeteksi belum melakukan verifikasi sertifikat keamanan terbaru. Transaksi keluar akan dihentikan sementara. Aktivasi kembali di link: bankbsi-layanan[.]top/aktivasi.",
+    "attack_vector": "credential_phishing",
+    "requested_actions": ["link_click", "password_input"]
+  },
+  {
+    "id": "fraud_019_lelang_pegadaian_palsu",
+    "category": "lelang_palsu",
+    "target_brand": "Pegadaian",
+    "label": "phishing",
+    "text": "LELANG TERTUTUP PT PEGADAIAN (PERSERO): iPhone 15 Pro Max 256GB barang sitaan jaminan jatuh tempo dilelang seharga Rp 4.500.000 (kondisi mulus/lengkap). Siapa cepat dia dapat. Transfer uang muka tanda jadi Rp 1.000.000 ke Rekening Mandiri: 144001928312 atas nama Bendahara Lelang.",
+    "attack_vector": "social_engineering_transfer",
+    "requested_actions": ["transfer"]
+  },
+  {
+    "id": "fraud_020_cs_fake_ovo_unblock",
+    "category": "fintech_cs_palsu",
+    "target_brand": "OVO",
+    "label": "phishing",
+    "text": "Halo Kak, kami dari Customer Care OVO Indonesia melihat akun Anda dibatasi karena salah memasukkan security code. Untuk membuka blokir akun OVO Premier Kakak, silakan sebutkan 4 digit kode yang kami kirimkan via SMS sekarang.",
+    "attack_vector": "vishing_otp",
+    "requested_actions": ["otp_disclosure"]
+  },
+  {
+    "id": "fraud_021_traveloka_kupon_hotel",
+    "category": "ecommerce_reward",
+    "target_brand": "Traveloka",
+    "label": "phishing",
+    "text": "Promo Kilat Traveloka Epic Sale: Dapatkan voucher diskon hotel & tiket pesawat 90% tanpa minimal belanja. Klaim kode kupon eksklusif Anda di hxxps://traveloka-epicsale[.]online/promo sekarang sebelum kuota habis!",
+    "attack_vector": "credential_phishing",
+    "requested_actions": ["link_click", "password_input"]
+  },
+  {
+    "id": "fraud_022_whatsapp_takeover_pin",
+    "category": "social_engineering",
+    "target_brand": "WhatsApp",
+    "label": "phishing",
+    "text": "Hai kawan, maaf tadi aku mau beli voucher game tapi salah masukkan nomor HP dan kodenya terkirim ke SMS kamu. Boleh minta tolong kirimkan 6 angka yang barusan masuk ke HP kamu? Penting banget makasih ya.",
+    "attack_vector": "otp_theft",
+    "requested_actions": ["otp_disclosure"]
+  },
+  {
+    "id": "fraud_023_pinjol_salah_transfer",
+    "category": "pinjol_ilegal",
+    "target_brand": "Pinjol Ilegal",
+    "label": "phishing",
+    "text": "PERINGATAN PINJAMAN: Dana sebesar Rp 3.000.000 telah kami cairkan ke rekening Anda. Bunga harian berjalan 5%. Segera bayar cicilan pertama hari ini ke VA Bank Permata: 871099231019 atau data kontak di HP Anda akan kami sebar ke media sosial.",
+    "attack_vector": "blackmail_extortion",
+    "requested_actions": ["transfer"]
+  },
+  {
+    "id": "fraud_024_telkomsel_poin_hangus",
+    "category": "telekomunikasi_reward",
+    "target_brand": "Telkomsel",
+    "label": "phishing",
+    "text": "Telkomsel Poin: 4.200 POIN Anda akan kedaluwarsa pada 31 Agustus 2026. Tukarkan segera poin Anda dengan Saldo LinkAja Rp 500.000 atau paket data 50GB di hxxps://poin-telkomsel[.]vip/tukar sebelum hangus.",
+    "attack_vector": "credential_phishing",
+    "requested_actions": ["link_click", "otp_input"]
+  },
+  {
+    "id": "fraud_025_satusehat_vaksin_apk",
+    "category": "pemerintah_kesehatan",
+    "target_brand": "SatuSehat Kemenkes",
+    "label": "phishing",
+    "text": "KEMENTERIAN KESEHATAN RI: Sertifikat Vaksinasi Booster Internasional Anda telah terbit. Silakan unduh dokumen digital dan barcode perjalanan luar negeri pada file Sertifikat_Vaksin_SatuSehat.apk terlampir.",
+    "attack_vector": "apk_malware",
+    "requested_actions": ["apk_install"]
+  },
+  {
+    "id": "legit_001_bca_mutasi",
+    "category": "resmi_perbankan",
+    "target_brand": "BCA",
+    "label": "legitimate",
+    "text": "m-BCA: 28/08 10:15:30 TRSF E-BANKING CR 500.000,00 DARI 9876543210 HENDRA WIJAYA. Saldo Rp 3.750.000,00. Hubungi HaloBCA 1500888 jika butuh info.",
+    "attack_vector": "none",
+    "requested_actions": ["none"]
+  },
+  {
+    "id": "legit_002_mandiri_otp_resmi",
+    "category": "resmi_otp",
+    "target_brand": "Mandiri",
+    "label": "legitimate",
+    "text": "JANGAN BERIKAN KODE INI KEPADA SIAPA PUN TERMASUK PIHAK BANK MANDIRI. Kode OTP transaksi Livin Anda adalah 839102. Berlaku selama 5 menit.",
+    "attack_vector": "none",
+    "requested_actions": ["none"]
+  },
+  {
+    "id": "legit_003_tokopedia_pengiriman",
+    "category": "resmi_ecommerce",
+    "target_brand": "Tokopedia",
+    "label": "legitimate",
+    "text": "Pesanan nomor INV/20260828/MPL/778899 sedang diantar oleh kurir SiCepat (No Resi: 001928374610). Pantau posisi kurir langsung di aplikasi Tokopedia.",
+    "attack_vector": "none",
+    "requested_actions": ["none"]
+  },
+  {
+    "id": "legit_004_pln_token_resmi",
+    "category": "resmi_utilitas",
+    "target_brand": "PLN",
+    "label": "legitimate",
+    "text": "Pembelian Token Listrik PLN Prabayar Berhasil. IDPEL: 532100987654, Nomor Token: 1928-3847-5610-2938-4756, Daya: 1300VA, KWh: 65.8. Terima kasih.",
+    "attack_vector": "none",
+    "requested_actions": ["none"]
+  },
+  {
+    "id": "legit_005_telkomsel_paket_resmi",
+    "category": "resmi_telekomunikasi",
+    "target_brand": "Telkomsel",
+    "label": "legitimate",
+    "text": "Selamat, Paket Internet Bulanan 25GB/30 Hari Rp 75.000 telah aktif. Cek sisa kuota dan masa aktif Anda melalui aplikasi MyTelkomsel atau hubungi *363#.",
+    "attack_vector": "none",
+    "requested_actions": ["none"]
+  }
+]
