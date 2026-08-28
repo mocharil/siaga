@@ -49,10 +49,12 @@ $Action = New-ScheduledTaskAction -Execute $PythonExe -Argument "`"$CollectorScr
 $Trigger = New-ScheduledTaskTrigger -Daily -At $Time
 
 # 3. Settings:
+#    - ExecutionTimeLimit: Terminate task if running longer than 1 hour (prevent hanging task blocking next schedule)
+#    - MultipleInstances: IgnoreNew (default) to prevent concurrent DB writes
 #    - StartWhenAvailable: Run immediately if scheduled 06:30 was missed (laptop asleep/off)
 #    - WakeToRun: Wake computer to execute task
 #    - AllowStartIfOnBatteries & DontStopIfGoingOnBatteries: Ensure runs on battery power
-$Settings = New-ScheduledTaskSettingsSet -StartWhenAvailable -WakeToRun -AllowStartIfOnBatteries -DontStopIfGoingOnBatteries
+$Settings = New-ScheduledTaskSettingsSet -ExecutionTimeLimit (New-TimeSpan -Hours 1) -StartWhenAvailable -WakeToRun -AllowStartIfOnBatteries -DontStopIfGoingOnBatteries
 
 # 4. Register Task
 $RegisteredTask = Register-ScheduledTask -TaskName $TaskName -Action $Action -Trigger $Trigger -Settings $Settings -Description "SIAGA CT Collector Daily Task (06:30 WIB)" -Force
