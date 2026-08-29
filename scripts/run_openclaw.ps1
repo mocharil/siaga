@@ -50,6 +50,14 @@ if (-not $ResolvedApiKey) {
     exit 1
 }
 
+# 3b. Telegram token is a soft requirement — needed for T24/T25 heartbeat
+# delivery, but the gateway itself should still start without it.
+$TelegramToken = $env:TELEGRAM_BOT_TOKEN
+if (-not $TelegramToken) {
+    Write-Host "WARNING: TELEGRAM_BOT_TOKEN kosong - channel Telegram tidak akan berfungsi." -ForegroundColor Yellow
+    $TelegramToken = ""
+}
+
 # 4. Ensure volume exists
 $volCheck = docker volume ls -q -f name=$Volume
 if (-not $volCheck) {
@@ -78,6 +86,7 @@ docker run -d `
     --restart unless-stopped `
     -p "127.0.0.1:${Port}:${Port}" `
     -v "${Volume}:/home/node/.openclaw" `
+    -v "${RepoDir}:/workspace/siaga" `
     -e HOME=/home/node `
     -e OPENCLAW_HOME=/home/node `
     -e OPENCLAW_STATE_DIR=/home/node/.openclaw `
@@ -85,6 +94,8 @@ docker run -d `
     -e OPENCLAW_CONFIG_DIR=/home/node/.openclaw `
     -e OPENCLAW_WORKSPACE_DIR=/home/node/.openclaw/workspace `
     -e OPENAI_API_KEY="${ResolvedApiKey}" `
+    -e TELEGRAM_BOT_TOKEN="${TelegramToken}" `
+    -e SIAGA_OWNER_CHAT_ID="$($env:SIAGA_OWNER_CHAT_ID)" `
     $Image
 
 if ($LASTEXITCODE -eq 0) {
@@ -93,4 +104,27 @@ if ($LASTEXITCODE -eq 0) {
 } else {
     Write-Error "Failed to start OpenClaw Gateway container."
     exit 1
+}
+
+# 8. Bootstrap Python deps for the mounted SIAGA repo, every start.
+# NOT a one-time step: /home/node/.local is NOT on any persistent volume,
+# so anything installed there vanishes on every container recreation
+# (including the future VPS migration). This image ships Python but no
+# pip and no ensurepip (venv module cannot bootstrap itself), so pip is
+# fetched fresh via get-pip.py each time - no apt, no root, ~5 seconds.
+Write-Host "Bootstrapping pip + SIAGA Python dependencies inside the container..."
+$bootstrapCmd = "curl -sS https://bootstrap.pypa.io/get-pip.py -o /tmp/get-pip.py && python3 /tmp/get-pip.py --user --quiet --break-system-packages && ~/.local/bin/pip3 install --quiet --break-system-packages -r /workspace/siaga/requirements.txt"
+$bootstrapped = $false
+for ($i = 1; $i -le 5; $i++) {
+    docker exec $ContainerName bash -c $bootstrapCmd
+    if ($LASTEXITCODE -eq 0) {
+        Write-Host "SIAGA dependencies installed." -ForegroundColor Green
+        $bootstrapped = $true
+        break
+    }
+    Write-Host "Container not ready yet, retrying ($i/5)..." -ForegroundColor Yellow
+    Start-Sleep -Seconds 2
+}
+if (-not $bootstrapped) {
+    Write-Error "Failed to bootstrap SIAGA Python dependencies after 5 attempts."
 }
