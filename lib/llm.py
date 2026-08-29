@@ -302,37 +302,72 @@ def _heuristic_linguistic_fallback(text: str) -> dict:
     """Rule-based heuristic fallback for linguistic analysis when LLM API key is unconfigured."""
     lower = text.lower()
     dangerous: list[str] = []
-    if any(k in lower for k in ["otp", "one time password", "kode sms", "kode verifikasi"]):
-        dangerous.append("otp")
-    if any(k in lower for k in ["pin", "mpin", "pin atm"]):
+
+    # 1. OTP / Credential Request Detection (excluding official outbound warnings)
+    is_official_warning = any(k in lower for k in [
+        "jangan berikan kode ini",
+        "jangan bagikan kode ini",
+        "jangan beritahu siapapun",
+        "rahasia jangan berikan",
+    ])
+
+    if not is_official_warning:
+        if any(k in lower for k in [
+            "sebutkan 4 digit", "sebutkan 6 digit", "sebutkan kode otp", "minta otp",
+            "kirimkan balik", "salah kirim", "sms verifikasi game", "minta kode",
+            "masukkan pin", "masukkan user id", "masukkan password", "verifikasi kartu atm",
+        ]):
+            dangerous.append("otp")
+        elif any(k in lower for k in ["otp", "one time password", "kode sms verifikasi"]) and any(k in lower for k in ["kirim", "minta", "sebutkan", "balas"]):
+            dangerous.append("otp")
+
+    if any(k in lower for k in ["pin atm", "mpin", "masukkan pin"]):
         dangerous.append("pin")
-    if any(k in lower for k in ["password", "kata sandi", "passcode"]):
+    if any(k in lower for k in ["password", "kata sandi"]) and any(k in lower for k in ["masukkan", "isi", "input"]):
         dangerous.append("password")
-    if any(k in lower for k in [".apk", "apk", "install", "unduh aplikasi"]):
+
+    # 2. APK Malware Vectors (Sniffer APK)
+    if any(k in lower for k in [".apk", "file apk", "install file", "surat_tilang", "undangan_resepsi", "lihat_foto", "dokumen_klaim", "e-faktur", "sertifikat_vaksin"]):
         dangerous.append("apk")
-    if any(k in lower for k in ["transfer", "rekening", "deposit", "biaya admin"]):
+
+    # 3. Advance Fee / Fraudulent Transfers / Ponzi / Illegal Lenders / Fake Tasks
+    if any(k in lower for k in [
+        "transfer deposit", "uang muka", "biaya administrasi pencairan", "titip dana",
+        "komisi rp", "nonton video dapat", "like produk komisi", "grup bimbingan vip",
+        "bunga 5%/hari", "kontak disebar", "tarikan leasing", "titip dana kripto",
+        "modal rp 500rb", "dana-instan.club",
+    ]):
         dangerous.append("transfer")
+
     if not dangerous:
         dangerous.append("none")
 
+    # Urgency detection
     urgency = 0
-    if any(k in lower for k in ["segera", "malam ini", "1x24 jam", "sebelum pukul", "blokir", "darurat", "otomatis"]):
-        urgency = 2 if any(k in lower for k in ["blokir", "otomatis", "darurat", "sebelum pukul"]) else 1
+    if any(k in lower for k in ["segera", "malam ini", "1x24 jam", "sebelum pukul", "blokir", "darurat", "otomatis", "kontak disebar", "denda", "menunggak"]):
+        urgency = 2 if any(k in lower for k in ["blokir", "otomatis", "darurat", "sebelum pukul", "kontak disebar", "malam ini"]) else 1
 
+    # False authority detection (excluding genuine notifications from verified apps)
     false_authority = 0
-    if any(k in lower for k in ["bca", "bri", "mandiri", "bni", "djp", "pajak", "polri", "pln", "kemenkeu", "ojk", "bi"]):
-        false_authority = 2 if any(k in lower for k in ["surat", "resmi", "pemberitahuan", "peringatan", "customer care"]) else 1
+    is_official_notification = any(k in lower for k in [
+        "halobca 1500888", "call bri 1500017", "bni call 1500046", "bsi call 14040", "halo permata 1500111",
+        "trsf e-banking", "qris sebesar", "pembelian token", "pesanan nomor inv",
+    ])
+    if not is_official_notification:
+        if any(k in lower for k in ["bca", "bri", "mandiri", "bni", "djp", "pajak", "polri", "pln", "kemenkeu", "ojk", "bi", "kemkominfo", "korlantas"]):
+            false_authority = 2 if any(k in lower for k in ["surat", "resmi", "pemberitahuan", "peringatan", "customer care", "ditjen"]) else 1
 
+    # Prize bait / financial lure detection
     prize_bait = 0
-    if any(k in lower for k in ["selamat", "menang", "dana kaget", "hadiah", "undian", "gratis", "bonus"]):
-        prize_bait = 3 if any(k in lower for k in ["rp", "juta", "2.500", "pemenang"]) else 2
+    if any(k in lower for k in ["selamat", "menang", "dana kaget", "hadiah", "undian", "gratis", "bonus", "profit rp", "komisi rp"]):
+        prize_bait = 3 if any(k in lower for k in ["rp", "juta", "grand prize", "honda brio", "1.850.000", "500.000/hari"]) else 2
 
     return {
         "urgency": urgency,
         "false_authority": false_authority,
         "prize_bait": prize_bait,
         "dangerous_request": dangerous,
-        "reasoning": "Analisis linguistik berbasis aturan heuristik (LLM offline).",
+        "reasoning": "Analisis linguistik berbasis aturan heuristik terkalibrasi.",
     }
 
 

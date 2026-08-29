@@ -42,16 +42,17 @@ SCORING_WEIGHTS = {
     "multi_hop_redirect": 15,
     "unreachable_domain": 10,
 
-    # Linguistic Signals (~40% group weight)
-    "dangerous_request_credential": 30,  # otp, pin, password
-    "dangerous_request_apk": 30,         # apk download/install
-    "dangerous_request_transfer": 20,    # money transfer
-    "urgency_high": 15,                  # urgency >= 2
+    # Linguistic Signals (~40% group weight - calibrated in T21)
+    "dangerous_request_credential": 35,  # otp, pin, password
+    "dangerous_request_apk": 50,         # apk download/install (Sniffer APK)
+    "dangerous_request_transfer": 30,    # money transfer / deposit / advance fee
+    "urgency_high": 20,                  # urgency >= 2
     "urgency_medium": 8,                 # urgency == 1
-    "false_authority_high": 20,          # false_authority >= 2
+    "false_authority_high": 25,          # false_authority >= 2
     "false_authority_medium": 10,        # false_authority == 1
-    "prize_bait_high": 20,               # prize_bait >= 2
+    "prize_bait_high": 25,               # prize_bait >= 2
     "prize_bait_medium": 10,             # prize_bait == 1
+    "unofficial_chat_channel": 15,       # t.me / wa.me link for sensitive transaction
 }
 
 RISK_THRESHOLDS = {
@@ -239,6 +240,12 @@ def score_risk(
         breakdown.append(SignalBreakdown("linguistic", "prize_bait_medium", pts, "Iming-iming promo"))
         reasons.append("Menyebutkan penawaran hadiah atau promo yang menarik perhatian.")
 
+    if linguistic_signals.get("unofficial_chat_channel"):
+        pts = SCORING_WEIGHTS["unofficial_chat_channel"]
+        ling_points += pts
+        breakdown.append(SignalBreakdown("linguistic", "unofficial_chat_channel", pts, "Mengarahkan transaksi ke saluran chat pribadi non-resmi"))
+        reasons.append("Mengarahkan transaksi finansial/verifikasi ke kontak chat pribadi (WhatsApp/Telegram).")
+
     # 3. Combine and Cap Score
     raw_total = tech_points + ling_points
     score = min(100, max(0, raw_total))
@@ -361,6 +368,11 @@ def analyze_message(
 
     # Step 3: Linguistic Analysis
     ling_signals = analyze_linguistics(message, db_path=resolved_db)
+
+    # Check for sensitive transaction redirect to unofficial chat channel (wa.me / t.me)
+    if any(u in message.lower() for u in ["wa.me/", "t.me/", "chat.whatsapp.com/"]):
+        if ling_signals.get("false_authority", 0) > 0 or ling_signals.get("urgency", 0) > 0 or "transfer" in ling_signals.get("dangerous_request", []):
+            ling_signals["unofficial_chat_channel"] = True
 
     # Step 4: Scoring
     scoring_result = score_risk(
