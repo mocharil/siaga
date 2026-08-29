@@ -1,0 +1,3223 @@
+{
+  "summary": {
+    "timestamp": "2026-08-29T03:07:08.225749+00:00",
+    "total_samples": 120,
+    "confusion_matrix": {
+      "true_positives": 56,
+      "false_positives": 0,
+      "true_negatives": 59,
+      "false_negatives": 5
+    },
+    "metrics": {
+      "accuracy": 0.9583,
+      "precision": 1.0,
+      "recall": 0.918,
+      "f1_score": 0.9573,
+      "false_positive_rate": 0.0
+    },
+    "latency_ms": {
+      "p50": 3539.07,
+      "p95": 8676.53,
+      "min": 0.04,
+      "max": 15634.31
+    },
+    "error_count": 5
+  },
+  "errors": [
+    {
+      "id": "m071",
+      "type": "message",
+      "ground_truth": "scam",
+      "predicted": "legit",
+      "is_correct": false,
+      "score": 18,
+      "level": "AMAN",
+      "reasons": [
+        "Terdapat indikasi desakan waktu untuk segera merespons.",
+        "Menyebutkan penawaran hadiah atau promo yang menarik perhatian."
+      ],
+      "breakdown": [
+        {
+          "signal": "urgency_medium",
+          "points": 8
+        },
+        {
+          "signal": "prize_bait_medium",
+          "points": 10
+        }
+      ],
+      "latency_ms": 3116.97,
+      "content": "Hai kak, promo diskon gila-gilaan baju thrift diskon up to 70% cuma hari ini di toko IG kami @thrift_jkt_murah. Cek kata..."
+    },
+    {
+      "id": "m075",
+      "type": "message",
+      "ground_truth": "scam",
+      "predicted": "legit",
+      "is_correct": false,
+      "score": 10,
+      "level": "AMAN",
+      "reasons": [
+        "Menyebutkan penawaran hadiah atau promo yang menarik perhatian."
+      ],
+      "breakdown": [
+        {
+          "signal": "prize_bait_medium",
+          "points": 10
+        }
+      ],
+      "latency_ms": 3745.44,
+      "content": "Dapatkan penghasilan jutaan rupiah dengan modal kecil reseller gamis muslimah. Info katalog hubungi WhatsApp 08123456789..."
+    },
+    {
+      "id": "m080",
+      "type": "message",
+      "ground_truth": "scam",
+      "predicted": "legit",
+      "is_correct": false,
+      "score": 28,
+      "level": "AMAN",
+      "reasons": [
+        "Terdapat indikasi desakan waktu untuk segera merespons.",
+        "Pesan mengatasnamakan institusi tertentu yang perlu diverifikasi keabsahannya.",
+        "Menyebutkan penawaran hadiah atau promo yang menarik perhatian."
+      ],
+      "breakdown": [
+        {
+          "signal": "urgency_medium",
+          "points": 8
+        },
+        {
+          "signal": "false_authority_medium",
+          "points": 10
+        },
+        {
+          "signal": "prize_bait_medium",
+          "points": 10
+        }
+      ],
+      "latency_ms": 9972.88,
+      "content": "Pinjaman dana cepat cair jaminan BPKB motor/mobil tanpa BI checking. Proses 1 jam cair. Hubungi marketing resmi di 08139..."
+    },
+    {
+      "id": "m086",
+      "type": "message",
+      "ground_truth": "scam",
+      "predicted": "legit",
+      "is_correct": false,
+      "score": 0,
+      "level": "AMAN",
+      "reasons": [
+        "Tidak ditemukan permintaan data rahasia seperti OTP, PIN, atau kata sandi.",
+        "Struktur pesan wajar tanpa indikasi manipulasi psikologis atau desakan mendesak.",
+        "Tidak ditemukan tautan berbahaya atau pengunduhan file tidak dikenal."
+      ],
+      "breakdown": [],
+      "latency_ms": 4028.08,
+      "content": "Jual mobil tarikan leasing Honda HR-V 2023 mulus tangan pertama surat lengkap harga Rp 120jt nego. Hubungi WhatsApp 0858..."
+    },
+    {
+      "id": "d013",
+      "type": "domain",
+      "ground_truth": "scam",
+      "predicted": "legit",
+      "is_correct": false,
+      "score": 0,
+      "level": "AMAN",
+      "reasons": [
+        "Domain resmi / tidak mencatut institusi."
+      ],
+      "breakdown": [],
+      "latency_ms": 97.82,
+      "content": "kemkominfo-verifikasi.xyz"
+    }
+  ],
+  "results": [
+    {
+      "id": "m001",
+      "type": "message",
+      "ground_truth": "scam",
+      "predicted": "scam",
+      "is_correct": true,
+      "score": 85,
+      "level": "INDIKASI PENIPUAN",
+      "reasons": [
+        "Alamat domain mencatut nama 'Bank Central Asia' tetapi bukan domain resmi institusi tersebut.",
+        "Menggunakan ekstensi domain berisiko tinggi (.online) yang lazim dipakai phishing murah.",
+        "Menggunakan taktik manipulasi psikologis berupa desakan waktu dan ancaman agar korban panik.",
+        "Mencatut nama institusi atau otoritas resmi dengan format pesan yang meniru pengumuman asli."
+      ],
+      "breakdown": [
+        {
+          "signal": "watchlist_similarity",
+          "points": 25
+        },
+        {
+          "signal": "risky_tld",
+          "points": 15
+        },
+        {
+          "signal": "urgency_high",
+          "points": 20
+        },
+        {
+          "signal": "false_authority_high",
+          "points": 25
+        }
+      ],
+      "latency_ms": 7530.85,
+      "content": "SURAT PEMBERITAHUAN RESMI BANK BCA: Tarif transfer antar bank disesuaikan Rp 150.000/bln. Batalkan di hxxps://bca-tarifp..."
+    },
+    {
+      "id": "m002",
+      "type": "message",
+      "ground_truth": "scam",
+      "predicted": "scam",
+      "is_correct": true,
+      "score": 100,
+      "level": "INDIKASI PENIPUAN",
+      "reasons": [
+        "Alamat domain mencatut nama 'Bank Rakyat Indonesia' tetapi bukan domain resmi institusi tersebut.",
+        "Menggunakan ekstensi domain berisiko tinggi (.vip) yang lazim dipakai phishing murah.",
+        "Menggunakan taktik manipulasi psikologis berupa desakan waktu dan ancaman agar korban panik.",
+        "Mencatut nama institusi atau otoritas resmi dengan format pesan yang meniru pengumuman asli.",
+        "Menjanjikan hadiah uang tunai atau saldo gratis yang tidak masuk akal."
+      ],
+      "breakdown": [
+        {
+          "signal": "watchlist_similarity",
+          "points": 25
+        },
+        {
+          "signal": "risky_tld",
+          "points": 15
+        },
+        {
+          "signal": "urgency_high",
+          "points": 20
+        },
+        {
+          "signal": "false_authority_high",
+          "points": 25
+        },
+        {
+          "signal": "prize_bait_high",
+          "points": 25
+        }
+      ],
+      "latency_ms": 3529.56,
+      "content": "Selamat! Rekening BRImo Anda terpilih Grand Prize Honda Brio. Hubungi CS dan isi data klaim di hxxp://gebyar-brimo[.]vip..."
+    },
+    {
+      "id": "m003",
+      "type": "message",
+      "ground_truth": "scam",
+      "predicted": "scam",
+      "is_correct": true,
+      "score": 100,
+      "level": "INDIKASI PENIPUAN",
+      "reasons": [
+        "Alamat domain mencatut nama 'Bank Mandiri' tetapi bukan domain resmi institusi tersebut.",
+        "Menggunakan ekstensi domain berisiko tinggi (.xyz) yang lazim dipakai phishing murah.",
+        "Pesan meminta data rahasia sensitif (OTP/PIN/Kata Sandi) yang tidak pernah diminta oleh bank resmi.",
+        "Menggunakan taktik manipulasi psikologis berupa desakan waktu dan ancaman agar korban panik.",
+        "Mencatut nama institusi atau otoritas resmi dengan format pesan yang meniru pengumuman asli."
+      ],
+      "breakdown": [
+        {
+          "signal": "watchlist_similarity",
+          "points": 25
+        },
+        {
+          "signal": "risky_tld",
+          "points": 15
+        },
+        {
+          "signal": "dangerous_request_credential",
+          "points": 35
+        },
+        {
+          "signal": "urgency_high",
+          "points": 20
+        },
+        {
+          "signal": "false_authority_high",
+          "points": 25
+        }
+      ],
+      "latency_ms": 9341.79,
+      "content": "Peringatan Keamanan Livin Mandiri: Terdeteksi login asing dari Medan. Rekening akan diblokir dalam 30 menit. Verifikasi ..."
+    },
+    {
+      "id": "m004",
+      "type": "message",
+      "ground_truth": "scam",
+      "predicted": "scam",
+      "is_correct": true,
+      "score": 83,
+      "level": "INDIKASI PENIPUAN",
+      "reasons": [
+        "Pesan mengarahkan korban menginstal file aplikasi (.APK) di luar toko aplikasi resmi (potensi malware pencuri SMS/rekening).",
+        "Terdapat indikasi desakan waktu untuk segera merespons.",
+        "Mencatut nama institusi atau otoritas resmi dengan format pesan yang meniru pengumuman asli."
+      ],
+      "breakdown": [
+        {
+          "signal": "dangerous_request_apk",
+          "points": 50
+        },
+        {
+          "signal": "urgency_medium",
+          "points": 8
+        },
+        {
+          "signal": "false_authority_high",
+          "points": 25
+        }
+      ],
+      "latency_ms": 3736.77,
+      "content": "KORLANTAS POLRI: Kendaraan Anda terkena tilang ETLE melanggar rambu lalu lintas. Buka foto bukti dan dokumen tilang pada..."
+    },
+    {
+      "id": "m005",
+      "type": "message",
+      "ground_truth": "scam",
+      "predicted": "scam",
+      "is_correct": true,
+      "score": 50,
+      "level": "HATI-HATI",
+      "reasons": [
+        "Pesan mengarahkan korban menginstal file aplikasi (.APK) di luar toko aplikasi resmi (potensi malware pencuri SMS/rekening)."
+      ],
+      "breakdown": [
+        {
+          "signal": "dangerous_request_apk",
+          "points": 50
+        }
+      ],
+      "latency_ms": 4117.37,
+      "content": "Undangan Pernikahan Digital Kami. Denah dan waktu acara ada di file Undangan_Resepsi_Digital.apk. Mohon doa restunya."
+    },
+    {
+      "id": "m006",
+      "type": "message",
+      "ground_truth": "scam",
+      "predicted": "scam",
+      "is_correct": true,
+      "score": 95,
+      "level": "INDIKASI PENIPUAN",
+      "reasons": [
+        "Pesan mengarahkan korban menginstal file aplikasi (.APK) di luar toko aplikasi resmi (potensi malware pencuri SMS/rekening).",
+        "Menggunakan taktik manipulasi psikologis berupa desakan waktu dan ancaman agar korban panik.",
+        "Mencatut nama institusi atau otoritas resmi dengan format pesan yang meniru pengumuman asli."
+      ],
+      "breakdown": [
+        {
+          "signal": "dangerous_request_apk",
+          "points": 50
+        },
+        {
+          "signal": "urgency_high",
+          "points": 20
+        },
+        {
+          "signal": "false_authority_high",
+          "points": 25
+        }
+      ],
+      "latency_ms": 3529.16,
+      "content": "JNE Express: Paket JNE8821901 tertahan karena alamat tidak lengkap. Install file LIHAT_FOTO_PAKET.apk untuk konfirmasi p..."
+    },
+    {
+      "id": "m007",
+      "type": "message",
+      "ground_truth": "scam",
+      "predicted": "scam",
+      "is_correct": true,
+      "score": 100,
+      "level": "INDIKASI PENIPUAN",
+      "reasons": [
+        "Pesan mengarahkan korban menginstal file aplikasi (.APK) di luar toko aplikasi resmi (potensi malware pencuri SMS/rekening).",
+        "Terdapat indikasi desakan waktu untuk segera merespons.",
+        "Mencatut nama institusi atau otoritas resmi dengan format pesan yang meniru pengumuman asli.",
+        "Menjanjikan hadiah uang tunai atau saldo gratis yang tidak masuk akal."
+      ],
+      "breakdown": [
+        {
+          "signal": "dangerous_request_apk",
+          "points": 50
+        },
+        {
+          "signal": "urgency_medium",
+          "points": 8
+        },
+        {
+          "signal": "false_authority_high",
+          "points": 25
+        },
+        {
+          "signal": "prize_bait_high",
+          "points": 25
+        }
+      ],
+      "latency_ms": 3807.73,
+      "content": "J&T Express Cargo: Paket rusak di gudang sortir. Buka file Dokumen_Klaim_Ganti_Rugi.apk untuk verifikasi pencairan dana ..."
+    },
+    {
+      "id": "m008",
+      "type": "message",
+      "ground_truth": "scam",
+      "predicted": "scam",
+      "is_correct": true,
+      "score": 100,
+      "level": "INDIKASI PENIPUAN",
+      "reasons": [
+        "Alamat domain mencatut nama 'DANA Indonesia' tetapi bukan domain resmi institusi tersebut.",
+        "Menggunakan ekstensi domain berisiko tinggi (.site) yang lazim dipakai phishing murah.",
+        "Menggunakan taktik manipulasi psikologis berupa desakan waktu dan ancaman agar korban panik.",
+        "Mencatut nama institusi atau otoritas resmi dengan format pesan yang meniru pengumuman asli.",
+        "Menjanjikan hadiah uang tunai atau saldo gratis yang tidak masuk akal."
+      ],
+      "breakdown": [
+        {
+          "signal": "watchlist_similarity",
+          "points": 25
+        },
+        {
+          "signal": "risky_tld",
+          "points": 15
+        },
+        {
+          "signal": "urgency_high",
+          "points": 20
+        },
+        {
+          "signal": "false_authority_high",
+          "points": 25
+        },
+        {
+          "signal": "prize_bait_high",
+          "points": 25
+        }
+      ],
+      "latency_ms": 3829.93,
+      "content": "DANA Kaget Rp 1.850.000 untuk 10 orang tercepat! Klaim saldo gratis Anda di link: dana-kaget.site/amplop-1850jt sebelum ..."
+    },
+    {
+      "id": "m009",
+      "type": "message",
+      "ground_truth": "scam",
+      "predicted": "scam",
+      "is_correct": true,
+      "score": 100,
+      "level": "INDIKASI PENIPUAN",
+      "reasons": [
+        "Alamat domain mencatut nama 'ShopeePay Indonesia' tetapi bukan domain resmi institusi tersebut.",
+        "Menggunakan ekstensi domain berisiko tinggi (.online) yang lazim dipakai phishing murah.",
+        "Menggunakan taktik manipulasi psikologis berupa desakan waktu dan ancaman agar korban panik.",
+        "Mencatut nama institusi atau otoritas resmi dengan format pesan yang meniru pengumuman asli.",
+        "Menjanjikan hadiah uang tunai atau saldo gratis yang tidak masuk akal."
+      ],
+      "breakdown": [
+        {
+          "signal": "watchlist_similarity",
+          "points": 25
+        },
+        {
+          "signal": "risky_tld",
+          "points": 15
+        },
+        {
+          "signal": "urgency_high",
+          "points": 20
+        },
+        {
+          "signal": "false_authority_high",
+          "points": 25
+        },
+        {
+          "signal": "prize_bait_high",
+          "points": 25
+        }
+      ],
+      "latency_ms": 8736.83,
+      "content": "Shopee Indonesia: Limit SPayLater Rp 15.000.000 Anda akan hangus malam ini. Cairkan limit menjadi saldo di hxxps://shope..."
+    },
+    {
+      "id": "m010",
+      "type": "message",
+      "ground_truth": "scam",
+      "predicted": "scam",
+      "is_correct": true,
+      "score": 100,
+      "level": "INDIKASI PENIPUAN",
+      "reasons": [
+        "Alamat domain mencatut nama 'Perusahaan Listrik Negara' tetapi bukan domain resmi institusi tersebut.",
+        "Menggunakan ekstensi domain berisiko tinggi (.top) yang lazim dipakai phishing murah.",
+        "Pesan menuntut transfer uang atau biaya administrasi awal.",
+        "Menggunakan taktik manipulasi psikologis berupa desakan waktu dan ancaman agar korban panik.",
+        "Mencatut nama institusi atau otoritas resmi dengan format pesan yang meniru pengumuman asli."
+      ],
+      "breakdown": [
+        {
+          "signal": "watchlist_similarity",
+          "points": 25
+        },
+        {
+          "signal": "risky_tld",
+          "points": 15
+        },
+        {
+          "signal": "dangerous_request_transfer",
+          "points": 30
+        },
+        {
+          "signal": "urgency_high",
+          "points": 20
+        },
+        {
+          "signal": "false_authority_high",
+          "points": 25
+        }
+      ],
+      "latency_ms": 3505.56,
+      "content": "PERINGATAN PEMUTUSAN PLN: ID 521098231012 menunggak denda Rp 245.000. Petugas akan memutus listrik pukul 14.00. Lunasi s..."
+    },
+    {
+      "id": "m011",
+      "type": "message",
+      "ground_truth": "scam",
+      "predicted": "scam",
+      "is_correct": true,
+      "score": 83,
+      "level": "INDIKASI PENIPUAN",
+      "reasons": [
+        "Pesan mengarahkan korban menginstal file aplikasi (.APK) di luar toko aplikasi resmi (potensi malware pencuri SMS/rekening).",
+        "Terdapat indikasi desakan waktu untuk segera merespons.",
+        "Mencatut nama institusi atau otoritas resmi dengan format pesan yang meniru pengumuman asli."
+      ],
+      "breakdown": [
+        {
+          "signal": "dangerous_request_apk",
+          "points": 50
+        },
+        {
+          "signal": "urgency_medium",
+          "points": 8
+        },
+        {
+          "signal": "false_authority_high",
+          "points": 25
+        }
+      ],
+      "latency_ms": 15634.31,
+      "content": "DITJEN PAJAK: Surat Kurang Bayar PPh 2025. Rincian tagihan pajak terlampir di file e-Faktur_Coretax_DJP.apk. Unduh dan k..."
+    },
+    {
+      "id": "m012",
+      "type": "message",
+      "ground_truth": "scam",
+      "predicted": "scam",
+      "is_correct": true,
+      "score": 60,
+      "level": "HATI-HATI",
+      "reasons": [
+        "Menggunakan ekstensi domain berisiko tinggi (.xyz) yang lazim dipakai phishing murah.",
+        "Menggunakan taktik manipulasi psikologis berupa desakan waktu dan ancaman agar korban panik.",
+        "Mencatut nama institusi atau otoritas resmi dengan format pesan yang meniru pengumuman asli."
+      ],
+      "breakdown": [
+        {
+          "signal": "risky_tld",
+          "points": 15
+        },
+        {
+          "signal": "urgency_high",
+          "points": 20
+        },
+        {
+          "signal": "false_authority_high",
+          "points": 25
+        }
+      ],
+      "latency_ms": 4069.63,
+      "content": "KEMKOMINFO: SIM card Anda belum registrasi biometrik. Akan dinonaktifkan malam ini. Registrasi di web: kemkominfo-verifi..."
+    },
+    {
+      "id": "m013",
+      "type": "message",
+      "ground_truth": "scam",
+      "predicted": "scam",
+      "is_correct": true,
+      "score": 80,
+      "level": "INDIKASI PENIPUAN",
+      "reasons": [
+        "Pesan menuntut transfer uang atau biaya administrasi awal.",
+        "Mencatut nama institusi atau otoritas resmi dengan format pesan yang meniru pengumuman asli.",
+        "Menjanjikan hadiah uang tunai atau saldo gratis yang tidak masuk akal."
+      ],
+      "breakdown": [
+        {
+          "signal": "dangerous_request_transfer",
+          "points": 30
+        },
+        {
+          "signal": "false_authority_high",
+          "points": 25
+        },
+        {
+          "signal": "prize_bait_high",
+          "points": 25
+        }
+      ],
+      "latency_ms": 6133.52,
+      "content": "Lowongan WFH Shopee Mall: Like produk komisi Rp 500.000/hari. Aktivasi akun transfer deposit Rp 50.000 ke Rekening BCA 8..."
+    },
+    {
+      "id": "m014",
+      "type": "message",
+      "ground_truth": "scam",
+      "predicted": "scam",
+      "is_correct": true,
+      "score": 73,
+      "level": "INDIKASI PENIPUAN",
+      "reasons": [
+        "Terdapat indikasi desakan waktu untuk segera merespons.",
+        "Mencatut nama institusi atau otoritas resmi dengan format pesan yang meniru pengumuman asli.",
+        "Menjanjikan hadiah uang tunai atau saldo gratis yang tidak masuk akal.",
+        "Mengarahkan transaksi finansial/verifikasi ke kontak chat pribadi (WhatsApp/Telegram)."
+      ],
+      "breakdown": [
+        {
+          "signal": "urgency_medium",
+          "points": 8
+        },
+        {
+          "signal": "false_authority_high",
+          "points": 25
+        },
+        {
+          "signal": "prize_bait_high",
+          "points": 25
+        },
+        {
+          "signal": "unofficial_chat_channel",
+          "points": 15
+        }
+      ],
+      "latency_ms": 4836.49,
+      "content": "Kerja Paruh Waktu TikTok Shop: Nonton video dapat Rp 300.000/hari. Gabung grup bimbingan VIP di t.me/tiktok_freelance_in..."
+    },
+    {
+      "id": "m015",
+      "type": "message",
+      "ground_truth": "scam",
+      "predicted": "scam",
+      "is_correct": true,
+      "score": 100,
+      "level": "INDIKASI PENIPUAN",
+      "reasons": [
+        "URL disamarkan melalui 2 tahapan pengalihan (redirect).",
+        "Pesan menuntut transfer uang atau biaya administrasi awal.",
+        "Terdapat indikasi desakan waktu untuk segera merespons.",
+        "Mencatut nama institusi atau otoritas resmi dengan format pesan yang meniru pengumuman asli.",
+        "Menjanjikan hadiah uang tunai atau saldo gratis yang tidak masuk akal.",
+        "Mengarahkan transaksi finansial/verifikasi ke kontak chat pribadi (WhatsApp/Telegram)."
+      ],
+      "breakdown": [
+        {
+          "signal": "multi_hop_redirect",
+          "points": 15
+        },
+        {
+          "signal": "dangerous_request_transfer",
+          "points": 30
+        },
+        {
+          "signal": "urgency_medium",
+          "points": 8
+        },
+        {
+          "signal": "false_authority_high",
+          "points": 25
+        },
+        {
+          "signal": "prize_bait_high",
+          "points": 25
+        },
+        {
+          "signal": "unofficial_chat_channel",
+          "points": 15
+        }
+      ],
+      "latency_ms": 5336.52,
+      "content": "INVESTASI TITIP DANA KRIPTO: Modal Rp 500rb profit Rp 7.5jt dalam 6 jam. Dijamin OJK & Bappebti. Chat admin di wa.me/628..."
+    },
+    {
+      "id": "m016",
+      "type": "message",
+      "ground_truth": "scam",
+      "predicted": "scam",
+      "is_correct": true,
+      "score": 100,
+      "level": "INDIKASI PENIPUAN",
+      "reasons": [
+        "Alamat domain mencatut nama 'BPJS Kesehatan' tetapi bukan domain resmi institusi tersebut.",
+        "Menggunakan ekstensi domain berisiko tinggi (.site) yang lazim dipakai phishing murah.",
+        "Pesan meminta data rahasia sensitif (OTP/PIN/Kata Sandi) yang tidak pernah diminta oleh bank resmi.",
+        "Mencatut nama institusi atau otoritas resmi dengan format pesan yang meniru pengumuman asli.",
+        "Menjanjikan hadiah uang tunai atau saldo gratis yang tidak masuk akal."
+      ],
+      "breakdown": [
+        {
+          "signal": "watchlist_similarity",
+          "points": 25
+        },
+        {
+          "signal": "risky_tld",
+          "points": 15
+        },
+        {
+          "signal": "dangerous_request_credential",
+          "points": 35
+        },
+        {
+          "signal": "false_authority_high",
+          "points": 25
+        },
+        {
+          "signal": "prize_bait_high",
+          "points": 25
+        }
+      ],
+      "latency_ms": 3976.3,
+      "content": "BPJS Ketenagakerjaan: Anda penerima Bantuan Subsidi Upah Rp 1.200.000. Tautkan rekening di link: bpjs-subsidi[.]site/cek..."
+    },
+    {
+      "id": "m017",
+      "type": "message",
+      "ground_truth": "scam",
+      "predicted": "scam",
+      "is_correct": true,
+      "score": 100,
+      "level": "INDIKASI PENIPUAN",
+      "reasons": [
+        "Alamat domain mencatut nama 'Bank Negara Indonesia' tetapi bukan domain resmi institusi tersebut.",
+        "Menggunakan ekstensi domain berisiko tinggi (.live) yang lazim dipakai phishing murah.",
+        "Pesan meminta data rahasia sensitif (OTP/PIN/Kata Sandi) yang tidak pernah diminta oleh bank resmi.",
+        "Menggunakan taktik manipulasi psikologis berupa desakan waktu dan ancaman agar korban panik.",
+        "Mencatut nama institusi atau otoritas resmi dengan format pesan yang meniru pengumuman asli."
+      ],
+      "breakdown": [
+        {
+          "signal": "watchlist_similarity",
+          "points": 25
+        },
+        {
+          "signal": "risky_tld",
+          "points": 15
+        },
+        {
+          "signal": "dangerous_request_credential",
+          "points": 35
+        },
+        {
+          "signal": "urgency_high",
+          "points": 20
+        },
+        {
+          "signal": "false_authority_high",
+          "points": 25
+        }
+      ],
+      "latency_ms": 3940.43,
+      "content": "Nasabah BNI: Update sistem wondr by BNI wajib verifikasi kartu ATM & PIN di hxxps://bni-wondr[.]live/update sebelum tang..."
+    },
+    {
+      "id": "m018",
+      "type": "message",
+      "ground_truth": "scam",
+      "predicted": "scam",
+      "is_correct": true,
+      "score": 85,
+      "level": "INDIKASI PENIPUAN",
+      "reasons": [
+        "Alamat domain mencatut nama 'Bank Syariah Indonesia' tetapi bukan domain resmi institusi tersebut.",
+        "Menggunakan ekstensi domain berisiko tinggi (.top) yang lazim dipakai phishing murah.",
+        "Menggunakan taktik manipulasi psikologis berupa desakan waktu dan ancaman agar korban panik.",
+        "Mencatut nama institusi atau otoritas resmi dengan format pesan yang meniru pengumuman asli."
+      ],
+      "breakdown": [
+        {
+          "signal": "watchlist_similarity",
+          "points": 25
+        },
+        {
+          "signal": "risky_tld",
+          "points": 15
+        },
+        {
+          "signal": "urgency_high",
+          "points": 20
+        },
+        {
+          "signal": "false_authority_high",
+          "points": 25
+        }
+      ],
+      "latency_ms": 9154.69,
+      "content": "BSI Mobile: Layanan transaksi Anda dinonaktifkan karena verifikasi berkas tertunda. Aktivasi di link: bankbsi-layanan[.]..."
+    },
+    {
+      "id": "m019",
+      "type": "message",
+      "ground_truth": "scam",
+      "predicted": "scam",
+      "is_correct": true,
+      "score": 80,
+      "level": "INDIKASI PENIPUAN",
+      "reasons": [
+        "Pesan menuntut transfer uang atau biaya administrasi awal.",
+        "Mencatut nama institusi atau otoritas resmi dengan format pesan yang meniru pengumuman asli.",
+        "Menjanjikan hadiah uang tunai atau saldo gratis yang tidak masuk akal."
+      ],
+      "breakdown": [
+        {
+          "signal": "dangerous_request_transfer",
+          "points": 30
+        },
+        {
+          "signal": "false_authority_high",
+          "points": 25
+        },
+        {
+          "signal": "prize_bait_high",
+          "points": 25
+        }
+      ],
+      "latency_ms": 3112.52,
+      "content": "LELANG PEGADAIAN: iPhone 15 Pro Max sitaan Rp 4.500.000. Transfer uang muka Rp 1.000.000 ke Rekening Mandiri 14400192831..."
+    },
+    {
+      "id": "m020",
+      "type": "message",
+      "ground_truth": "scam",
+      "predicted": "scam",
+      "is_correct": true,
+      "score": 80,
+      "level": "INDIKASI PENIPUAN",
+      "reasons": [
+        "Pesan meminta data rahasia sensitif (OTP/PIN/Kata Sandi) yang tidak pernah diminta oleh bank resmi.",
+        "Menggunakan taktik manipulasi psikologis berupa desakan waktu dan ancaman agar korban panik.",
+        "Mencatut nama institusi atau otoritas resmi dengan format pesan yang meniru pengumuman asli."
+      ],
+      "breakdown": [
+        {
+          "signal": "dangerous_request_credential",
+          "points": 35
+        },
+        {
+          "signal": "urgency_high",
+          "points": 20
+        },
+        {
+          "signal": "false_authority_high",
+          "points": 25
+        }
+      ],
+      "latency_ms": 2923.57,
+      "content": "Customer Care OVO: Akun dibatasi. Untuk membuka blokir OVO Premier, sebutkan 4 digit kode OTP yang kami kirim via SMS."
+    },
+    {
+      "id": "m021",
+      "type": "message",
+      "ground_truth": "scam",
+      "predicted": "scam",
+      "is_correct": true,
+      "score": 83,
+      "level": "INDIKASI PENIPUAN",
+      "reasons": [
+        "Alamat domain mencatut nama 'Traveloka' tetapi bukan domain resmi institusi tersebut.",
+        "Menggunakan ekstensi domain berisiko tinggi (.online) yang lazim dipakai phishing murah.",
+        "Terdapat indikasi desakan waktu untuk segera merespons.",
+        "Mencatut nama institusi atau otoritas resmi dengan format pesan yang meniru pengumuman asli.",
+        "Menyebutkan penawaran hadiah atau promo yang menarik perhatian."
+      ],
+      "breakdown": [
+        {
+          "signal": "watchlist_similarity",
+          "points": 25
+        },
+        {
+          "signal": "risky_tld",
+          "points": 15
+        },
+        {
+          "signal": "urgency_medium",
+          "points": 8
+        },
+        {
+          "signal": "false_authority_high",
+          "points": 25
+        },
+        {
+          "signal": "prize_bait_medium",
+          "points": 10
+        }
+      ],
+      "latency_ms": 3886.28,
+      "content": "Traveloka Epic Sale: Diskon hotel 90%. Klaim kode voucher di hxxps://traveloka-epicsale[.]online/promo sebelum kuota hab..."
+    },
+    {
+      "id": "m022",
+      "type": "message",
+      "ground_truth": "scam",
+      "predicted": "scam",
+      "is_correct": true,
+      "score": 43,
+      "level": "HATI-HATI",
+      "reasons": [
+        "Pesan meminta data rahasia sensitif (OTP/PIN/Kata Sandi) yang tidak pernah diminta oleh bank resmi.",
+        "Terdapat indikasi desakan waktu untuk segera merespons."
+      ],
+      "breakdown": [
+        {
+          "signal": "dangerous_request_credential",
+          "points": 35
+        },
+        {
+          "signal": "urgency_medium",
+          "points": 8
+        }
+      ],
+      "latency_ms": 5997.81,
+      "content": "Halo kawan, aku salah kirim 6 angka SMS verifikasi game ke nomor kamu. Boleh kirimkan balik 6 angka itu ke aku ya pentin..."
+    },
+    {
+      "id": "m023",
+      "type": "message",
+      "ground_truth": "scam",
+      "predicted": "scam",
+      "is_correct": true,
+      "score": 75,
+      "level": "INDIKASI PENIPUAN",
+      "reasons": [
+        "Pesan menuntut transfer uang atau biaya administrasi awal.",
+        "Menggunakan taktik manipulasi psikologis berupa desakan waktu dan ancaman agar korban panik.",
+        "Mencatut nama institusi atau otoritas resmi dengan format pesan yang meniru pengumuman asli."
+      ],
+      "breakdown": [
+        {
+          "signal": "dangerous_request_transfer",
+          "points": 30
+        },
+        {
+          "signal": "urgency_high",
+          "points": 20
+        },
+        {
+          "signal": "false_authority_high",
+          "points": 25
+        }
+      ],
+      "latency_ms": 3783.51,
+      "content": "PERINGATAN PINJOL: Dana Rp 3.000.000 dicairkan. Bunga 5%/hari. Bayar cicilan hari ini ke VA Permata 871099231019 atau ko..."
+    },
+    {
+      "id": "m024",
+      "type": "message",
+      "ground_truth": "scam",
+      "predicted": "scam",
+      "is_correct": true,
+      "score": 100,
+      "level": "INDIKASI PENIPUAN",
+      "reasons": [
+        "Alamat domain mencatut nama 'Telkomsel' tetapi bukan domain resmi institusi tersebut.",
+        "Menggunakan ekstensi domain berisiko tinggi (.vip) yang lazim dipakai phishing murah.",
+        "Menggunakan taktik manipulasi psikologis berupa desakan waktu dan ancaman agar korban panik.",
+        "Mencatut nama institusi atau otoritas resmi dengan format pesan yang meniru pengumuman asli.",
+        "Menjanjikan hadiah uang tunai atau saldo gratis yang tidak masuk akal."
+      ],
+      "breakdown": [
+        {
+          "signal": "watchlist_similarity",
+          "points": 25
+        },
+        {
+          "signal": "risky_tld",
+          "points": 15
+        },
+        {
+          "signal": "urgency_high",
+          "points": 20
+        },
+        {
+          "signal": "false_authority_high",
+          "points": 25
+        },
+        {
+          "signal": "prize_bait_high",
+          "points": 25
+        }
+      ],
+      "latency_ms": 4073.61,
+      "content": "Telkomsel Poin: 4.200 poin hangus besok. Tukar saldo LinkAja Rp 500.000 di hxxps://poin-telkomsel[.]vip/tukar sekarang."
+    },
+    {
+      "id": "m025",
+      "type": "message",
+      "ground_truth": "scam",
+      "predicted": "scam",
+      "is_correct": true,
+      "score": 75,
+      "level": "INDIKASI PENIPUAN",
+      "reasons": [
+        "Pesan mengarahkan korban menginstal file aplikasi (.APK) di luar toko aplikasi resmi (potensi malware pencuri SMS/rekening).",
+        "Mencatut nama institusi atau otoritas resmi dengan format pesan yang meniru pengumuman asli."
+      ],
+      "breakdown": [
+        {
+          "signal": "dangerous_request_apk",
+          "points": 50
+        },
+        {
+          "signal": "false_authority_high",
+          "points": 25
+        }
+      ],
+      "latency_ms": 3333.38,
+      "content": "KEMENKES RI: Sertifikat Vaksinasi Booster Internasional terbit. Unduh dokumen pada file Sertifikat_Vaksin_SatuSehat.apk."
+    },
+    {
+      "id": "m026",
+      "type": "message",
+      "ground_truth": "scam",
+      "predicted": "scam",
+      "is_correct": true,
+      "score": 100,
+      "level": "INDIKASI PENIPUAN",
+      "reasons": [
+        "Alamat domain mencatut nama 'Bank Danamon' tetapi bukan domain resmi institusi tersebut.",
+        "Menggunakan ekstensi domain berisiko tinggi (.xyz) yang lazim dipakai phishing murah.",
+        "Pesan meminta data rahasia sensitif (OTP/PIN/Kata Sandi) yang tidak pernah diminta oleh bank resmi.",
+        "Menggunakan taktik manipulasi psikologis berupa desakan waktu dan ancaman agar korban panik.",
+        "Mencatut nama institusi atau otoritas resmi dengan format pesan yang meniru pengumuman asli."
+      ],
+      "breakdown": [
+        {
+          "signal": "watchlist_similarity",
+          "points": 25
+        },
+        {
+          "signal": "risky_tld",
+          "points": 15
+        },
+        {
+          "signal": "dangerous_request_credential",
+          "points": 35
+        },
+        {
+          "signal": "urgency_high",
+          "points": 20
+        },
+        {
+          "signal": "false_authority_high",
+          "points": 25
+        }
+      ],
+      "latency_ms": 4056.97,
+      "content": "Bank Danamon: Terjadi transaksi debit Rp 5.000.000. Jika bukan Anda, segera batalkan di hxxps://danamon-dbank[.]secure[...."
+    },
+    {
+      "id": "m027",
+      "type": "message",
+      "ground_truth": "scam",
+      "predicted": "scam",
+      "is_correct": true,
+      "score": 100,
+      "level": "INDIKASI PENIPUAN",
+      "reasons": [
+        "Alamat domain mencatut nama 'Permata Bank' tetapi bukan domain resmi institusi tersebut.",
+        "Menggunakan ekstensi domain berisiko tinggi (.site) yang lazim dipakai phishing murah.",
+        "Pesan meminta data rahasia sensitif (OTP/PIN/Kata Sandi) yang tidak pernah diminta oleh bank resmi.",
+        "Menggunakan taktik manipulasi psikologis berupa desakan waktu dan ancaman agar korban panik.",
+        "Mencatut nama institusi atau otoritas resmi dengan format pesan yang meniru pengumuman asli."
+      ],
+      "breakdown": [
+        {
+          "signal": "watchlist_similarity",
+          "points": 25
+        },
+        {
+          "signal": "risky_tld",
+          "points": 15
+        },
+        {
+          "signal": "dangerous_request_credential",
+          "points": 35
+        },
+        {
+          "signal": "urgency_high",
+          "points": 20
+        },
+        {
+          "signal": "false_authority_high",
+          "points": 25
+        }
+      ],
+      "latency_ms": 3392.09,
+      "content": "Permata Bank: Akun PermataMobile X Anda terancam diblokir. Konfirmasi identitas di hxxp://permatabank-auth[.]site/login."
+    },
+    {
+      "id": "m028",
+      "type": "message",
+      "ground_truth": "scam",
+      "predicted": "scam",
+      "is_correct": true,
+      "score": 85,
+      "level": "INDIKASI PENIPUAN",
+      "reasons": [
+        "Alamat domain mencatut nama 'Bank Tabungan Negara' tetapi bukan domain resmi institusi tersebut.",
+        "Menggunakan ekstensi domain berisiko tinggi (.online) yang lazim dipakai phishing murah.",
+        "Menggunakan taktik manipulasi psikologis berupa desakan waktu dan ancaman agar korban panik.",
+        "Mencatut nama institusi atau otoritas resmi dengan format pesan yang meniru pengumuman asli."
+      ],
+      "breakdown": [
+        {
+          "signal": "watchlist_similarity",
+          "points": 25
+        },
+        {
+          "signal": "risky_tld",
+          "points": 15
+        },
+        {
+          "signal": "urgency_high",
+          "points": 20
+        },
+        {
+          "signal": "false_authority_high",
+          "points": 25
+        }
+      ],
+      "latency_ms": 3891.12,
+      "content": "Bank BTN: Penyesuaian biaya administrasi bulanan Rp 75.000. Pembatalan biaya akses btn-layanan[.]online/batal sebelum 24..."
+    },
+    {
+      "id": "m029",
+      "type": "message",
+      "ground_truth": "scam",
+      "predicted": "scam",
+      "is_correct": true,
+      "score": 100,
+      "level": "INDIKASI PENIPUAN",
+      "reasons": [
+        "Alamat domain mencatut nama 'CIMB Niaga' tetapi bukan domain resmi institusi tersebut.",
+        "Menggunakan ekstensi domain berisiko tinggi (.top) yang lazim dipakai phishing murah.",
+        "Pesan meminta data rahasia sensitif (OTP/PIN/Kata Sandi) yang tidak pernah diminta oleh bank resmi.",
+        "Terdapat indikasi desakan waktu untuk segera merespons.",
+        "Mencatut nama institusi atau otoritas resmi dengan format pesan yang meniru pengumuman asli.",
+        "Menjanjikan hadiah uang tunai atau saldo gratis yang tidak masuk akal."
+      ],
+      "breakdown": [
+        {
+          "signal": "watchlist_similarity",
+          "points": 25
+        },
+        {
+          "signal": "risky_tld",
+          "points": 15
+        },
+        {
+          "signal": "dangerous_request_credential",
+          "points": 35
+        },
+        {
+          "signal": "urgency_medium",
+          "points": 8
+        },
+        {
+          "signal": "false_authority_high",
+          "points": 25
+        },
+        {
+          "signal": "prize_bait_high",
+          "points": 25
+        }
+      ],
+      "latency_ms": 3379.35,
+      "content": "CIMB Niaga: Selamat Anda menerima cashback OCTO Mobile Rp 750.000. Masukkan PIN dan User ID di cimb-octocashback[.]top."
+    },
+    {
+      "id": "m030",
+      "type": "message",
+      "ground_truth": "scam",
+      "predicted": "scam",
+      "is_correct": true,
+      "score": 93,
+      "level": "INDIKASI PENIPUAN",
+      "reasons": [
+        "URL disamarkan melalui 2 tahapan pengalihan (redirect).",
+        "Pesan menuntut transfer uang atau biaya administrasi awal.",
+        "Terdapat indikasi desakan waktu untuk segera merespons.",
+        "Mencatut nama institusi atau otoritas resmi dengan format pesan yang meniru pengumuman asli.",
+        "Mengarahkan transaksi finansial/verifikasi ke kontak chat pribadi (WhatsApp/Telegram)."
+      ],
+      "breakdown": [
+        {
+          "signal": "multi_hop_redirect",
+          "points": 15
+        },
+        {
+          "signal": "dangerous_request_transfer",
+          "points": 30
+        },
+        {
+          "signal": "urgency_medium",
+          "points": 8
+        },
+        {
+          "signal": "false_authority_high",
+          "points": 25
+        },
+        {
+          "signal": "unofficial_chat_channel",
+          "points": 15
+        }
+      ],
+      "latency_ms": 4469.42,
+      "content": "Kredivo PayLater: Tagihan Anda menunggak Rp 1.500.000. Hubungi debt collector via WhatsApp wa.me/6281299001122 untuk bay..."
+    },
+    {
+      "id": "m031",
+      "type": "message",
+      "ground_truth": "scam",
+      "predicted": "scam",
+      "is_correct": true,
+      "score": 80,
+      "level": "INDIKASI PENIPUAN",
+      "reasons": [
+        "Pesan menuntut transfer uang atau biaya administrasi awal.",
+        "Mencatut nama institusi atau otoritas resmi dengan format pesan yang meniru pengumuman asli.",
+        "Menjanjikan hadiah uang tunai atau saldo gratis yang tidak masuk akal."
+      ],
+      "breakdown": [
+        {
+          "signal": "dangerous_request_transfer",
+          "points": 30
+        },
+        {
+          "signal": "false_authority_high",
+          "points": 25
+        },
+        {
+          "signal": "prize_bait_high",
+          "points": 25
+        }
+      ],
+      "latency_ms": 3579.95,
+      "content": "Akulaku Finance: Pengajuan kredit disetujui Rp 10.000.000. Transfer biaya administrasi pencairan Rp 250.000 ke Rekening ..."
+    },
+    {
+      "id": "m032",
+      "type": "message",
+      "ground_truth": "scam",
+      "predicted": "scam",
+      "is_correct": true,
+      "score": 100,
+      "level": "INDIKASI PENIPUAN",
+      "reasons": [
+        "Alamat domain mencatut nama 'Indodax Indonesia' tetapi bukan domain resmi institusi tersebut.",
+        "Menggunakan ekstensi domain berisiko tinggi (.vip) yang lazim dipakai phishing murah.",
+        "Pesan meminta data rahasia sensitif (OTP/PIN/Kata Sandi) yang tidak pernah diminta oleh bank resmi.",
+        "Menggunakan taktik manipulasi psikologis berupa desakan waktu dan ancaman agar korban panik.",
+        "Mencatut nama institusi atau otoritas resmi dengan format pesan yang meniru pengumuman asli."
+      ],
+      "breakdown": [
+        {
+          "signal": "watchlist_similarity",
+          "points": 25
+        },
+        {
+          "signal": "risky_tld",
+          "points": 15
+        },
+        {
+          "signal": "dangerous_request_credential",
+          "points": 35
+        },
+        {
+          "signal": "urgency_high",
+          "points": 20
+        },
+        {
+          "signal": "false_authority_high",
+          "points": 25
+        }
+      ],
+      "latency_ms": 4041.42,
+      "content": "Indodax: Penarikan saldo Bitcoin Anda diproses. Batalkan transaksi ilegal di hxxps://indodax-security[.]vip/cancel."
+    },
+    {
+      "id": "m033",
+      "type": "message",
+      "ground_truth": "scam",
+      "predicted": "scam",
+      "is_correct": true,
+      "score": 100,
+      "level": "INDIKASI PENIPUAN",
+      "reasons": [
+        "Alamat domain mencatut nama 'Tokocrypto' tetapi bukan domain resmi institusi tersebut.",
+        "Menggunakan ekstensi domain berisiko tinggi (.online) yang lazim dipakai phishing murah.",
+        "Pesan meminta data rahasia sensitif (OTP/PIN/Kata Sandi) yang tidak pernah diminta oleh bank resmi.",
+        "Menggunakan taktik manipulasi psikologis berupa desakan waktu dan ancaman agar korban panik.",
+        "Mencatut nama institusi atau otoritas resmi dengan format pesan yang meniru pengumuman asli."
+      ],
+      "breakdown": [
+        {
+          "signal": "watchlist_similarity",
+          "points": 25
+        },
+        {
+          "signal": "risky_tld",
+          "points": 15
+        },
+        {
+          "signal": "dangerous_request_credential",
+          "points": 35
+        },
+        {
+          "signal": "urgency_high",
+          "points": 20
+        },
+        {
+          "signal": "false_authority_high",
+          "points": 25
+        }
+      ],
+      "latency_ms": 3583.53,
+      "content": "Tokocrypto: Akun Anda login dari perangkat tidak dikenal di Moscow. Amankan aset kripto di tokocrypto-auth[.]online."
+    },
+    {
+      "id": "m034",
+      "type": "message",
+      "ground_truth": "scam",
+      "predicted": "scam",
+      "is_correct": true,
+      "score": 83,
+      "level": "INDIKASI PENIPUAN",
+      "reasons": [
+        "Pesan mengarahkan korban menginstal file aplikasi (.APK) di luar toko aplikasi resmi (potensi malware pencuri SMS/rekening).",
+        "Terdapat indikasi desakan waktu untuk segera merespons.",
+        "Mencatut nama institusi atau otoritas resmi dengan format pesan yang meniru pengumuman asli."
+      ],
+      "breakdown": [
+        {
+          "signal": "dangerous_request_apk",
+          "points": 50
+        },
+        {
+          "signal": "urgency_medium",
+          "points": 8
+        },
+        {
+          "signal": "false_authority_high",
+          "points": 25
+        }
+      ],
+      "latency_ms": 3782.34,
+      "content": "SiCepat Ekspres: Resi 001928192 bermasalah. Konfirmasi ulang alamat dengan unduh file tracking_resi_sicepat.apk."
+    },
+    {
+      "id": "m035",
+      "type": "message",
+      "ground_truth": "scam",
+      "predicted": "scam",
+      "is_correct": true,
+      "score": 100,
+      "level": "INDIKASI PENIPUAN",
+      "reasons": [
+        "Alamat domain mencatut nama 'Pos Indonesia' tetapi bukan domain resmi institusi tersebut.",
+        "Menggunakan ekstensi domain berisiko tinggi (.xyz) yang lazim dipakai phishing murah.",
+        "Pesan menuntut transfer uang atau biaya administrasi awal.",
+        "Terdapat indikasi desakan waktu untuk segera merespons.",
+        "Mencatut nama institusi atau otoritas resmi dengan format pesan yang meniru pengumuman asli."
+      ],
+      "breakdown": [
+        {
+          "signal": "watchlist_similarity",
+          "points": 25
+        },
+        {
+          "signal": "risky_tld",
+          "points": 15
+        },
+        {
+          "signal": "dangerous_request_transfer",
+          "points": 30
+        },
+        {
+          "signal": "urgency_medium",
+          "points": 8
+        },
+        {
+          "signal": "false_authority_high",
+          "points": 25
+        }
+      ],
+      "latency_ms": 3482.73,
+      "content": "Pos Indonesia: Pengiriman paket POS tertahan bea cukai. Bayar pajak impor di hxxps://posindonesia-tracking[.]xyz/pajak."
+    },
+    {
+      "id": "m036",
+      "type": "message",
+      "ground_truth": "scam",
+      "predicted": "scam",
+      "is_correct": true,
+      "score": 70,
+      "level": "INDIKASI PENIPUAN",
+      "reasons": [
+        "URL disamarkan melalui 2 tahapan pengalihan (redirect).",
+        "Menggunakan taktik manipulasi psikologis berupa desakan waktu dan ancaman agar korban panik.",
+        "Mencatut nama institusi atau otoritas resmi dengan format pesan yang meniru pengumuman asli.",
+        "Menyebutkan penawaran hadiah atau promo yang menarik perhatian."
+      ],
+      "breakdown": [
+        {
+          "signal": "multi_hop_redirect",
+          "points": 15
+        },
+        {
+          "signal": "urgency_high",
+          "points": 20
+        },
+        {
+          "signal": "false_authority_high",
+          "points": 25
+        },
+        {
+          "signal": "prize_bait_medium",
+          "points": 10
+        }
+      ],
+      "latency_ms": 3838.46,
+      "content": "Tiket.com: Promo tiket pesawat Rp 99.000. Booking cepat di tiket-promomerdeka[.]site sebelum jam 12 malam."
+    },
+    {
+      "id": "m037",
+      "type": "message",
+      "ground_truth": "scam",
+      "predicted": "scam",
+      "is_correct": true,
+      "score": 100,
+      "level": "INDIKASI PENIPUAN",
+      "reasons": [
+        "Alamat domain mencatut nama 'Blibli' tetapi bukan domain resmi institusi tersebut.",
+        "Menggunakan ekstensi domain berisiko tinggi (.online) yang lazim dipakai phishing murah.",
+        "Pesan meminta data rahasia sensitif (OTP/PIN/Kata Sandi) yang tidak pernah diminta oleh bank resmi.",
+        "Terdapat indikasi desakan waktu untuk segera merespons.",
+        "Mencatut nama institusi atau otoritas resmi dengan format pesan yang meniru pengumuman asli.",
+        "Menjanjikan hadiah uang tunai atau saldo gratis yang tidak masuk akal."
+      ],
+      "breakdown": [
+        {
+          "signal": "watchlist_similarity",
+          "points": 25
+        },
+        {
+          "signal": "risky_tld",
+          "points": 15
+        },
+        {
+          "signal": "dangerous_request_credential",
+          "points": 35
+        },
+        {
+          "signal": "urgency_medium",
+          "points": 8
+        },
+        {
+          "signal": "false_authority_high",
+          "points": 25
+        },
+        {
+          "signal": "prize_bait_high",
+          "points": 25
+        }
+      ],
+      "latency_ms": 3596.62,
+      "content": "Blibli Reward: Saldo BlibliPay Rp 1.000.000 siap cair. Masukkan password di hxxps://blibli-voucher[.]online/klaim."
+    },
+    {
+      "id": "m038",
+      "type": "message",
+      "ground_truth": "scam",
+      "predicted": "scam",
+      "is_correct": true,
+      "score": 100,
+      "level": "INDIKASI PENIPUAN",
+      "reasons": [
+        "Alamat domain mencatut nama 'Bank Jago' tetapi bukan domain resmi institusi tersebut.",
+        "Menggunakan ekstensi domain berisiko tinggi (.top) yang lazim dipakai phishing murah.",
+        "Pesan meminta data rahasia sensitif (OTP/PIN/Kata Sandi) yang tidak pernah diminta oleh bank resmi.",
+        "Menggunakan taktik manipulasi psikologis berupa desakan waktu dan ancaman agar korban panik.",
+        "Mencatut nama institusi atau otoritas resmi dengan format pesan yang meniru pengumuman asli."
+      ],
+      "breakdown": [
+        {
+          "signal": "watchlist_similarity",
+          "points": 25
+        },
+        {
+          "signal": "risky_tld",
+          "points": 15
+        },
+        {
+          "signal": "dangerous_request_credential",
+          "points": 35
+        },
+        {
+          "signal": "urgency_high",
+          "points": 20
+        },
+        {
+          "signal": "false_authority_high",
+          "points": 25
+        }
+      ],
+      "latency_ms": 3523.03,
+      "content": "Bank Jago: Akun Jago Kantong Anda dibekukan. Buka blokir di jago-aktivasi[.]top/unfreeze."
+    },
+    {
+      "id": "m039",
+      "type": "message",
+      "ground_truth": "scam",
+      "predicted": "scam",
+      "is_correct": true,
+      "score": 100,
+      "level": "INDIKASI PENIPUAN",
+      "reasons": [
+        "Alamat domain mencatut nama 'SeaBank Indonesia' tetapi bukan domain resmi institusi tersebut.",
+        "Menggunakan ekstensi domain berisiko tinggi (.site) yang lazim dipakai phishing murah.",
+        "Menggunakan taktik manipulasi psikologis berupa desakan waktu dan ancaman agar korban panik.",
+        "Mencatut nama institusi atau otoritas resmi dengan format pesan yang meniru pengumuman asli.",
+        "Menjanjikan hadiah uang tunai atau saldo gratis yang tidak masuk akal."
+      ],
+      "breakdown": [
+        {
+          "signal": "watchlist_similarity",
+          "points": 25
+        },
+        {
+          "signal": "risky_tld",
+          "points": 15
+        },
+        {
+          "signal": "urgency_high",
+          "points": 20
+        },
+        {
+          "signal": "false_authority_high",
+          "points": 25
+        },
+        {
+          "signal": "prize_bait_high",
+          "points": 25
+        }
+      ],
+      "latency_ms": 3474.15,
+      "content": "SeaBank: Bonus bunga deposito 15% khusus hari ini. Daftar rekening di seabank-promo[.]site/deposito."
+    },
+    {
+      "id": "m040",
+      "type": "message",
+      "ground_truth": "scam",
+      "predicted": "scam",
+      "is_correct": true,
+      "score": 100,
+      "level": "INDIKASI PENIPUAN",
+      "reasons": [
+        "Alamat domain mencatut nama 'Allo Bank' tetapi bukan domain resmi institusi tersebut.",
+        "Menggunakan ekstensi domain berisiko tinggi (.online) yang lazim dipakai phishing murah.",
+        "Pesan meminta data rahasia sensitif (OTP/PIN/Kata Sandi) yang tidak pernah diminta oleh bank resmi.",
+        "Mencatut nama institusi atau otoritas resmi dengan format pesan yang meniru pengumuman asli.",
+        "Menjanjikan hadiah uang tunai atau saldo gratis yang tidak masuk akal."
+      ],
+      "breakdown": [
+        {
+          "signal": "watchlist_similarity",
+          "points": 25
+        },
+        {
+          "signal": "risky_tld",
+          "points": 15
+        },
+        {
+          "signal": "dangerous_request_credential",
+          "points": 35
+        },
+        {
+          "signal": "false_authority_high",
+          "points": 25
+        },
+        {
+          "signal": "prize_bait_high",
+          "points": 25
+        }
+      ],
+      "latency_ms": 3721.73,
+      "content": "Allo Bank: Dapatkan saldo Allo Prime Rp 500rb gratis. Masukkan PIN transaksi di allobank-hadiah[.]online."
+    },
+    {
+      "id": "m041",
+      "type": "message",
+      "ground_truth": "legit",
+      "predicted": "legit",
+      "is_correct": true,
+      "score": 10,
+      "level": "AMAN",
+      "reasons": [
+        "Pesan mengatasnamakan institusi tertentu yang perlu diverifikasi keabsahannya."
+      ],
+      "breakdown": [
+        {
+          "signal": "false_authority_medium",
+          "points": 10
+        }
+      ],
+      "latency_ms": 3870.08,
+      "content": "m-BCA: 28/08 10:15:30 TRSF E-BANKING CR 500.000,00 DARI 9876543210 HENDRA WIJAYA. Saldo Rp 3.750.000,00. Hubungi HaloBCA..."
+    },
+    {
+      "id": "m042",
+      "type": "message",
+      "ground_truth": "legit",
+      "predicted": "legit",
+      "is_correct": true,
+      "score": 18,
+      "level": "AMAN",
+      "reasons": [
+        "Terdapat indikasi desakan waktu untuk segera merespons.",
+        "Pesan mengatasnamakan institusi tertentu yang perlu diverifikasi keabsahannya."
+      ],
+      "breakdown": [
+        {
+          "signal": "urgency_medium",
+          "points": 8
+        },
+        {
+          "signal": "false_authority_medium",
+          "points": 10
+        }
+      ],
+      "latency_ms": 6173.12,
+      "content": "JANGAN BERIKAN KODE INI KEPADA SIAPA PUN TERMASUK PIHAK BANK MANDIRI. Kode OTP transaksi Livin Anda adalah 839102. Berla..."
+    },
+    {
+      "id": "m043",
+      "type": "message",
+      "ground_truth": "legit",
+      "predicted": "legit",
+      "is_correct": true,
+      "score": 10,
+      "level": "AMAN",
+      "reasons": [
+        "Pesan mengatasnamakan institusi tertentu yang perlu diverifikasi keabsahannya."
+      ],
+      "breakdown": [
+        {
+          "signal": "false_authority_medium",
+          "points": 10
+        }
+      ],
+      "latency_ms": 4249.47,
+      "content": "Pesanan nomor INV/20260828/MPL/778899 sedang diantar oleh kurir SiCepat (No Resi: 001928374610). Pantau posisi kurir lan..."
+    },
+    {
+      "id": "m044",
+      "type": "message",
+      "ground_truth": "legit",
+      "predicted": "legit",
+      "is_correct": true,
+      "score": 20,
+      "level": "AMAN",
+      "reasons": [
+        "Pesan mengatasnamakan institusi tertentu yang perlu diverifikasi keabsahannya."
+      ],
+      "breakdown": [
+        {
+          "signal": "domain_age_under_90d",
+          "points": 10
+        },
+        {
+          "signal": "false_authority_medium",
+          "points": 10
+        }
+      ],
+      "latency_ms": 3605.11,
+      "content": "Pembelian Token Listrik PLN Prabayar Berhasil. IDPEL: 532100987654, Nomor Token: 1928-3847-5610-2938-4756, Daya: 1300VA,..."
+    },
+    {
+      "id": "m045",
+      "type": "message",
+      "ground_truth": "legit",
+      "predicted": "legit",
+      "is_correct": true,
+      "score": 10,
+      "level": "AMAN",
+      "reasons": [
+        "Pesan mengatasnamakan institusi tertentu yang perlu diverifikasi keabsahannya."
+      ],
+      "breakdown": [
+        {
+          "signal": "false_authority_medium",
+          "points": 10
+        }
+      ],
+      "latency_ms": 3577.89,
+      "content": "Selamat, Paket Internet Bulanan 25GB/30 Hari Rp 75.000 telah aktif. Cek sisa kuota dan masa aktif Anda melalui aplikasi ..."
+    },
+    {
+      "id": "m046",
+      "type": "message",
+      "ground_truth": "legit",
+      "predicted": "legit",
+      "is_correct": true,
+      "score": 10,
+      "level": "AMAN",
+      "reasons": [
+        "Pesan mengatasnamakan institusi tertentu yang perlu diverifikasi keabsahannya."
+      ],
+      "breakdown": [
+        {
+          "signal": "false_authority_medium",
+          "points": 10
+        }
+      ],
+      "latency_ms": 3316.07,
+      "content": "BRImo: Transaksi QRIS sebesar Rp 45.000 di Kopi Kenangan berhasil pada 28/08 14:20 WIB. Sisa saldo tabungan Anda Rp 2.34..."
+    },
+    {
+      "id": "m047",
+      "type": "message",
+      "ground_truth": "legit",
+      "predicted": "legit",
+      "is_correct": true,
+      "score": 10,
+      "level": "AMAN",
+      "reasons": [
+        "Pesan mengatasnamakan institusi tertentu yang perlu diverifikasi keabsahannya."
+      ],
+      "breakdown": [
+        {
+          "signal": "false_authority_medium",
+          "points": 10
+        }
+      ],
+      "latency_ms": 6077.24,
+      "content": "BNI Notifikasi: Penarikan tunai ATM Rp 500.000 di ATM BNI SUDIRMAN berhasil. Saldo rekening Anda Rp 4.120.000. Info hubu..."
+    },
+    {
+      "id": "m048",
+      "type": "message",
+      "ground_truth": "legit",
+      "predicted": "legit",
+      "is_correct": true,
+      "score": 10,
+      "level": "AMAN",
+      "reasons": [
+        "Pesan mengatasnamakan institusi tertentu yang perlu diverifikasi keabsahannya."
+      ],
+      "breakdown": [
+        {
+          "signal": "false_authority_medium",
+          "points": 10
+        }
+      ],
+      "latency_ms": 3005.44,
+      "content": "BSI Mobile: Pembayaran tagihan Indihome Rp 325.000 berhasil pada 28/08 09:12. Nomor referensi BSI882910. Info BSI Call 1..."
+    },
+    {
+      "id": "m049",
+      "type": "message",
+      "ground_truth": "legit",
+      "predicted": "legit",
+      "is_correct": true,
+      "score": 10,
+      "level": "AMAN",
+      "reasons": [
+        "Pesan mengatasnamakan institusi tertentu yang perlu diverifikasi keabsahannya."
+      ],
+      "breakdown": [
+        {
+          "signal": "false_authority_medium",
+          "points": 10
+        }
+      ],
+      "latency_ms": 3587.79,
+      "content": "Kredivo: Pembayaran tagihan cicilan Rp 450.000 telah kami terima. Limit kredit Anda bertambah menjadi Rp 8.500.000. Teri..."
+    },
+    {
+      "id": "m050",
+      "type": "message",
+      "ground_truth": "legit",
+      "predicted": "legit",
+      "is_correct": true,
+      "score": 28,
+      "level": "AMAN",
+      "reasons": [
+        "Terdapat indikasi desakan waktu untuk segera merespons.",
+        "Pesan mengatasnamakan institusi tertentu yang perlu diverifikasi keabsahannya.",
+        "Menyebutkan penawaran hadiah atau promo yang menarik perhatian."
+      ],
+      "breakdown": [
+        {
+          "signal": "urgency_medium",
+          "points": 8
+        },
+        {
+          "signal": "false_authority_medium",
+          "points": 10
+        },
+        {
+          "signal": "prize_bait_medium",
+          "points": 10
+        }
+      ],
+      "latency_ms": 3489.53,
+      "content": "Shopee: Pesanan 26082877819 telah selesai. Dapatkan 200 Koin Shopee dengan memberikan ulasan produk di aplikasi Shopee s..."
+    },
+    {
+      "id": "m051",
+      "type": "message",
+      "ground_truth": "legit",
+      "predicted": "legit",
+      "is_correct": true,
+      "score": 10,
+      "level": "AMAN",
+      "reasons": [
+        "Pesan mengatasnamakan institusi tertentu yang perlu diverifikasi keabsahannya."
+      ],
+      "breakdown": [
+        {
+          "signal": "false_authority_medium",
+          "points": 10
+        }
+      ],
+      "latency_ms": 3788.32,
+      "content": "Traveloka: E-tiket penerbangan Garuda Indonesia GA-182 Jakarta-Surabaya tanggal 30 Agustus 2026 telah terbit. Cek e-tike..."
+    },
+    {
+      "id": "m052",
+      "type": "message",
+      "ground_truth": "legit",
+      "predicted": "legit",
+      "is_correct": true,
+      "score": 35,
+      "level": "AMAN",
+      "reasons": [
+        "URL disamarkan melalui 2 tahapan pengalihan (redirect).",
+        "Pesan mengatasnamakan institusi tertentu yang perlu diverifikasi keabsahannya.",
+        "Menyebutkan penawaran hadiah atau promo yang menarik perhatian."
+      ],
+      "breakdown": [
+        {
+          "signal": "multi_hop_redirect",
+          "points": 15
+        },
+        {
+          "signal": "false_authority_medium",
+          "points": 10
+        },
+        {
+          "signal": "prize_bait_medium",
+          "points": 10
+        }
+      ],
+      "latency_ms": 3570.49,
+      "content": "Tiket.com: Voucher hotel Aston Denpasar sebesar Rp 100.000 telah dimasukkan ke akun Anda. Gunakan saat checkout melalui ..."
+    },
+    {
+      "id": "m053",
+      "type": "message",
+      "ground_truth": "legit",
+      "predicted": "legit",
+      "is_correct": true,
+      "score": 0,
+      "level": "AMAN",
+      "reasons": [
+        "Tidak ditemukan permintaan data rahasia seperti OTP, PIN, atau kata sandi.",
+        "Struktur pesan wajar tanpa indikasi manipulasi psikologis atau desakan mendesak.",
+        "Tidak ditemukan tautan berbahaya atau pengunduhan file tidak dikenal."
+      ],
+      "breakdown": [],
+      "latency_ms": 3165.88,
+      "content": "DANA: Transfer saldo Rp 100.000 ke BCA 1234567890 berhasil. Biaya admin Rp 0 (Sisa kuota gratis transfer: 8x bulan ini)...."
+    },
+    {
+      "id": "m054",
+      "type": "message",
+      "ground_truth": "legit",
+      "predicted": "legit",
+      "is_correct": true,
+      "score": 0,
+      "level": "AMAN",
+      "reasons": [
+        "Tidak ditemukan permintaan data rahasia seperti OTP, PIN, atau kata sandi.",
+        "Struktur pesan wajar tanpa indikasi manipulasi psikologis atau desakan mendesak.",
+        "Tidak ditemukan tautan berbahaya atau pengunduhan file tidak dikenal."
+      ],
+      "breakdown": [],
+      "latency_ms": 3388.5,
+      "content": "OVO: Top up saldo Rp 200.000 via BCA Virtual Account berhasil. Saldo OVO Cash Anda saat ini Rp 345.000. Butuh bantuan? A..."
+    },
+    {
+      "id": "m055",
+      "type": "message",
+      "ground_truth": "legit",
+      "predicted": "legit",
+      "is_correct": true,
+      "score": 20,
+      "level": "AMAN",
+      "reasons": [
+        "Pesan mengatasnamakan institusi tertentu yang perlu diverifikasi keabsahannya.",
+        "Menyebutkan penawaran hadiah atau promo yang menarik perhatian."
+      ],
+      "breakdown": [
+        {
+          "signal": "false_authority_medium",
+          "points": 10
+        },
+        {
+          "signal": "prize_bait_medium",
+          "points": 10
+        }
+      ],
+      "latency_ms": 3238.94,
+      "content": "GoPay: Pembayaran GoFood Rp 58.000 ke Martabak San Francisco berhasil. Cashback Rp 5.000 GoPay Coins telah ditambahkan k..."
+    },
+    {
+      "id": "m056",
+      "type": "message",
+      "ground_truth": "legit",
+      "predicted": "legit",
+      "is_correct": true,
+      "score": 10,
+      "level": "AMAN",
+      "reasons": [
+        "Pesan mengatasnamakan institusi tertentu yang perlu diverifikasi keabsahannya."
+      ],
+      "breakdown": [
+        {
+          "signal": "false_authority_medium",
+          "points": 10
+        }
+      ],
+      "latency_ms": 3409.29,
+      "content": "BPJS Kesehatan: Iuran JKN-KIS bulan Agustus untuk 3 anggota keluarga sebesar Rp 105.000 telah lunas. Unduh kartu digital..."
+    },
+    {
+      "id": "m057",
+      "type": "message",
+      "ground_truth": "legit",
+      "predicted": "legit",
+      "is_correct": true,
+      "score": 25,
+      "level": "AMAN",
+      "reasons": [
+        "URL disamarkan melalui 2 tahapan pengalihan (redirect).",
+        "Pesan mengatasnamakan institusi tertentu yang perlu diverifikasi keabsahannya."
+      ],
+      "breakdown": [
+        {
+          "signal": "multi_hop_redirect",
+          "points": 15
+        },
+        {
+          "signal": "false_authority_medium",
+          "points": 10
+        }
+      ],
+      "latency_ms": 11281.73,
+      "content": "DJP Pajak: Bukti Penerimaan Elektronik (BPE) SPT Tahunan PPh Orang Pribadi Tahun Pajak 2025 dengan Nomor BPE: 1928374619..."
+    },
+    {
+      "id": "m058",
+      "type": "message",
+      "ground_truth": "legit",
+      "predicted": "legit",
+      "is_correct": true,
+      "score": 10,
+      "level": "AMAN",
+      "reasons": [
+        "Pesan mengatasnamakan institusi tertentu yang perlu diverifikasi keabsahannya."
+      ],
+      "breakdown": [
+        {
+          "signal": "false_authority_medium",
+          "points": 10
+        }
+      ],
+      "latency_ms": 3881.57,
+      "content": "Indosat IM3: Paket Freedom Internet 50GB Rp 100.000 berhasil diperpanjang otomatis. Masa aktif s/d 28/09/2026. Info puls..."
+    },
+    {
+      "id": "m059",
+      "type": "message",
+      "ground_truth": "legit",
+      "predicted": "legit",
+      "is_correct": true,
+      "score": 28,
+      "level": "AMAN",
+      "reasons": [
+        "Terdapat indikasi desakan waktu untuk segera merespons.",
+        "Pesan mengatasnamakan institusi tertentu yang perlu diverifikasi keabsahannya.",
+        "Menyebutkan penawaran hadiah atau promo yang menarik perhatian."
+      ],
+      "breakdown": [
+        {
+          "signal": "urgency_medium",
+          "points": 8
+        },
+        {
+          "signal": "false_authority_medium",
+          "points": 10
+        },
+        {
+          "signal": "prize_bait_medium",
+          "points": 10
+        }
+      ],
+      "latency_ms": 3548.58,
+      "content": "XL Axiata: Anda mendapatkan bonus kuota loyalty 5GB 3 Hari. Klaim reward Anda sekarang melalui aplikasi myXL tanpa biaya..."
+    },
+    {
+      "id": "m060",
+      "type": "message",
+      "ground_truth": "legit",
+      "predicted": "legit",
+      "is_correct": true,
+      "score": 10,
+      "level": "AMAN",
+      "reasons": [
+        "Pesan mengatasnamakan institusi tertentu yang perlu diverifikasi keabsahannya."
+      ],
+      "breakdown": [
+        {
+          "signal": "false_authority_medium",
+          "points": 10
+        }
+      ],
+      "latency_ms": 3488.04,
+      "content": "JNE: Paket 012819283120 telah tiba di gerai JNE Kebayoran Baru dan akan diantar ke alamat Anda hari ini antara pukul 10...."
+    },
+    {
+      "id": "m061",
+      "type": "message",
+      "ground_truth": "legit",
+      "predicted": "legit",
+      "is_correct": true,
+      "score": 10,
+      "level": "AMAN",
+      "reasons": [
+        "Pesan mengatasnamakan institusi tertentu yang perlu diverifikasi keabsahannya."
+      ],
+      "breakdown": [
+        {
+          "signal": "false_authority_medium",
+          "points": 10
+        }
+      ],
+      "latency_ms": 3521.47,
+      "content": "J&T Express: Resi JP99281029 telah diterima oleh YBS (Budi) pada 28/08 11:45. Terima kasih telah menggunakan jasa pengir..."
+    },
+    {
+      "id": "m062",
+      "type": "message",
+      "ground_truth": "legit",
+      "predicted": "legit",
+      "is_correct": true,
+      "score": 25,
+      "level": "AMAN",
+      "reasons": [
+        "URL disamarkan melalui 3 tahapan pengalihan (redirect).",
+        "Pesan mengatasnamakan institusi tertentu yang perlu diverifikasi keabsahannya."
+      ],
+      "breakdown": [
+        {
+          "signal": "multi_hop_redirect",
+          "points": 15
+        },
+        {
+          "signal": "false_authority_medium",
+          "points": 10
+        }
+      ],
+      "latency_ms": 4246.49,
+      "content": "Pos Indonesia: Kiriman Pos Kilat Khusus PosAja No Resi P260828001 telah berhasil diserahkan ke penerima. Lacak kiriman d..."
+    },
+    {
+      "id": "m063",
+      "type": "message",
+      "ground_truth": "legit",
+      "predicted": "legit",
+      "is_correct": true,
+      "score": 18,
+      "level": "AMAN",
+      "reasons": [
+        "Terdapat indikasi desakan waktu untuk segera merespons.",
+        "Pesan mengatasnamakan institusi tertentu yang perlu diverifikasi keabsahannya."
+      ],
+      "breakdown": [
+        {
+          "signal": "urgency_medium",
+          "points": 8
+        },
+        {
+          "signal": "false_authority_medium",
+          "points": 10
+        }
+      ],
+      "latency_ms": 3410.69,
+      "content": "Halo, kami dari Halodoc mengingatkan jadwal konsultasi dokter spesialis anak dr. Rina Sp.A akan dimulai dalam 15 menit m..."
+    },
+    {
+      "id": "m064",
+      "type": "message",
+      "ground_truth": "legit",
+      "predicted": "legit",
+      "is_correct": true,
+      "score": 25,
+      "level": "AMAN",
+      "reasons": [
+        "URL disamarkan melalui 2 tahapan pengalihan (redirect).",
+        "Menyebutkan penawaran hadiah atau promo yang menarik perhatian."
+      ],
+      "breakdown": [
+        {
+          "signal": "multi_hop_redirect",
+          "points": 15
+        },
+        {
+          "signal": "prize_bait_medium",
+          "points": 10
+        }
+      ],
+      "latency_ms": 3655.69,
+      "content": "Blibli: Verifikasi email akun Blibli Anda berhasil. Selamat berbelanja dan nikmati gratis ongkir berkali-kali di officia..."
+    },
+    {
+      "id": "m065",
+      "type": "message",
+      "ground_truth": "legit",
+      "predicted": "legit",
+      "is_correct": true,
+      "score": 25,
+      "level": "AMAN",
+      "reasons": [
+        "URL disamarkan melalui 2 tahapan pengalihan (redirect).",
+        "Pesan mengatasnamakan institusi tertentu yang perlu diverifikasi keabsahannya."
+      ],
+      "breakdown": [
+        {
+          "signal": "multi_hop_redirect",
+          "points": 15
+        },
+        {
+          "signal": "false_authority_medium",
+          "points": 10
+        }
+      ],
+      "latency_ms": 5342.38,
+      "content": "Bank Permata: Pembaruan syarat & ketentuan layanan PermataNet efektif 1 Oktober 2026 dapat dibaca di situs resmi permata..."
+    },
+    {
+      "id": "m066",
+      "type": "message",
+      "ground_truth": "legit",
+      "predicted": "legit",
+      "is_correct": true,
+      "score": 25,
+      "level": "AMAN",
+      "reasons": [
+        "URL disamarkan melalui 3 tahapan pengalihan (redirect).",
+        "Pesan mengatasnamakan institusi tertentu yang perlu diverifikasi keabsahannya."
+      ],
+      "breakdown": [
+        {
+          "signal": "multi_hop_redirect",
+          "points": 15
+        },
+        {
+          "signal": "false_authority_medium",
+          "points": 10
+        }
+      ],
+      "latency_ms": 3891.98,
+      "content": "CIMB Niaga: Suku bunga tabungan OCTO Savers mengalami penyesuaian per 1 September 2026. Rincian lengkap suku bunga dapat..."
+    },
+    {
+      "id": "m067",
+      "type": "message",
+      "ground_truth": "legit",
+      "predicted": "legit",
+      "is_correct": true,
+      "score": 18,
+      "level": "AMAN",
+      "reasons": [
+        "Terdapat indikasi desakan waktu untuk segera merespons.",
+        "Pesan mengatasnamakan institusi tertentu yang perlu diverifikasi keabsahannya."
+      ],
+      "breakdown": [
+        {
+          "signal": "urgency_medium",
+          "points": 8
+        },
+        {
+          "signal": "false_authority_medium",
+          "points": 10
+        }
+      ],
+      "latency_ms": 5317.85,
+      "content": "Indodax: Notifikasi Keamanan: Akun Anda berhasil masuk dari Chrome Windows IP Jakarta. Jika ini Anda, abaikan pesan ini...."
+    },
+    {
+      "id": "m068",
+      "type": "message",
+      "ground_truth": "legit",
+      "predicted": "legit",
+      "is_correct": true,
+      "score": 10,
+      "level": "AMAN",
+      "reasons": [
+        "Pesan mengatasnamakan institusi tertentu yang perlu diverifikasi keabsahannya."
+      ],
+      "breakdown": [
+        {
+          "signal": "false_authority_medium",
+          "points": 10
+        }
+      ],
+      "latency_ms": 3095.46,
+      "content": "Bibit: Pembelian Reksa Dana Danareksa Mawar Konservatif senilai Rp 1.000.000 telah diverifikasi oleh Bank Kustodian. Pan..."
+    },
+    {
+      "id": "m069",
+      "type": "message",
+      "ground_truth": "legit",
+      "predicted": "legit",
+      "is_correct": true,
+      "score": 10,
+      "level": "AMAN",
+      "reasons": [
+        "Pesan mengatasnamakan institusi tertentu yang perlu diverifikasi keabsahannya."
+      ],
+      "breakdown": [
+        {
+          "signal": "false_authority_medium",
+          "points": 10
+        }
+      ],
+      "latency_ms": 3279.69,
+      "content": "KAI Access: Tiket Kereta Argo Parahyangan Jakarta Gambir - Bandung keberangkatan 29/08 08.00 telah terbit dengan Kode Bo..."
+    },
+    {
+      "id": "m070",
+      "type": "message",
+      "ground_truth": "legit",
+      "predicted": "legit",
+      "is_correct": true,
+      "score": 10,
+      "level": "AMAN",
+      "reasons": [
+        "Pesan mengatasnamakan institusi tertentu yang perlu diverifikasi keabsahannya."
+      ],
+      "breakdown": [
+        {
+          "signal": "false_authority_medium",
+          "points": 10
+        }
+      ],
+      "latency_ms": 3677.44,
+      "content": "Pegadaian Digital: Pembayaran cicilan Tabungan Emas sebesar Rp 250.000 berhasil. Saldo emas Anda bertambah 0.2150 gram. ..."
+    },
+    {
+      "id": "m071",
+      "type": "message",
+      "ground_truth": "scam",
+      "predicted": "legit",
+      "is_correct": false,
+      "score": 18,
+      "level": "AMAN",
+      "reasons": [
+        "Terdapat indikasi desakan waktu untuk segera merespons.",
+        "Menyebutkan penawaran hadiah atau promo yang menarik perhatian."
+      ],
+      "breakdown": [
+        {
+          "signal": "urgency_medium",
+          "points": 8
+        },
+        {
+          "signal": "prize_bait_medium",
+          "points": 10
+        }
+      ],
+      "latency_ms": 3116.97,
+      "content": "Hai kak, promo diskon gila-gilaan baju thrift diskon up to 70% cuma hari ini di toko IG kami @thrift_jkt_murah. Cek kata..."
+    },
+    {
+      "id": "m072",
+      "type": "message",
+      "ground_truth": "legit",
+      "predicted": "legit",
+      "is_correct": true,
+      "score": 10,
+      "level": "AMAN",
+      "reasons": [
+        "Menyebutkan penawaran hadiah atau promo yang menarik perhatian."
+      ],
+      "breakdown": [
+        {
+          "signal": "prize_bait_medium",
+          "points": 10
+        }
+      ],
+      "latency_ms": 5341.06,
+      "content": "Survey Kepuasan Pelanggan: Dapatkan pulsa Rp 10.000 dengan mengisi 5 pertanyaan riset pasar di tautan survei-publik.id/r..."
+    },
+    {
+      "id": "m073",
+      "type": "message",
+      "ground_truth": "legit",
+      "predicted": "legit",
+      "is_correct": true,
+      "score": 15,
+      "level": "AMAN",
+      "reasons": [
+        "URL disamarkan melalui 2 tahapan pengalihan (redirect)."
+      ],
+      "breakdown": [
+        {
+          "signal": "multi_hop_redirect",
+          "points": 15
+        }
+      ],
+      "latency_ms": 6465.77,
+      "content": "Bro, ini link video podcast tadi siang yang seru banget: youtube.com/watch?v=dQw4w9WgXcQ tonton sampai habis ya kocak ab..."
+    },
+    {
+      "id": "m074",
+      "type": "message",
+      "ground_truth": "legit",
+      "predicted": "legit",
+      "is_correct": true,
+      "score": 0,
+      "level": "AMAN",
+      "reasons": [
+        "Tidak ditemukan permintaan data rahasia seperti OTP, PIN, atau kata sandi.",
+        "Struktur pesan wajar tanpa indikasi manipulasi psikologis atau desakan mendesak.",
+        "Tidak ditemukan tautan berbahaya atau pengunduhan file tidak dikenal."
+      ],
+      "breakdown": [],
+      "latency_ms": 4681.44,
+      "content": "Undangan Rapat RT 05: Mohon kehadiran Bapak/Ibu pada rapat warga hari Sabtu 30 Agustus pukul 19.30 di Balai Warga. Agend..."
+    },
+    {
+      "id": "m075",
+      "type": "message",
+      "ground_truth": "scam",
+      "predicted": "legit",
+      "is_correct": false,
+      "score": 10,
+      "level": "AMAN",
+      "reasons": [
+        "Menyebutkan penawaran hadiah atau promo yang menarik perhatian."
+      ],
+      "breakdown": [
+        {
+          "signal": "prize_bait_medium",
+          "points": 10
+        }
+      ],
+      "latency_ms": 3745.44,
+      "content": "Dapatkan penghasilan jutaan rupiah dengan modal kecil reseller gamis muslimah. Info katalog hubungi WhatsApp 08123456789..."
+    },
+    {
+      "id": "m076",
+      "type": "message",
+      "ground_truth": "legit",
+      "predicted": "legit",
+      "is_correct": true,
+      "score": 18,
+      "level": "AMAN",
+      "reasons": [
+        "Terdapat indikasi desakan waktu untuk segera merespons.",
+        "Pesan mengatasnamakan institusi tertentu yang perlu diverifikasi keabsahannya."
+      ],
+      "breakdown": [
+        {
+          "signal": "urgency_medium",
+          "points": 8
+        },
+        {
+          "signal": "false_authority_medium",
+          "points": 10
+        }
+      ],
+      "latency_ms": 2954.28,
+      "content": "Pemberitahuan: Nomor antrean perpanjangan SIM keliling Anda di Mall Pelayanan Publik adalah A-045 tanggal 29 Agustus 202..."
+    },
+    {
+      "id": "m077",
+      "type": "message",
+      "ground_truth": "legit",
+      "predicted": "legit",
+      "is_correct": true,
+      "score": 10,
+      "level": "AMAN",
+      "reasons": [
+        "Menyebutkan penawaran hadiah atau promo yang menarik perhatian."
+      ],
+      "breakdown": [
+        {
+          "signal": "prize_bait_medium",
+          "points": 10
+        }
+      ],
+      "latency_ms": 4830.43,
+      "content": "Kuis Berhadiah Tebak Skor Final Bola: Ketik SKOR spasi TEBAKAN kirim ke 99122. Tarif Rp 2.200/sms."
+    },
+    {
+      "id": "m078",
+      "type": "message",
+      "ground_truth": "legit",
+      "predicted": "legit",
+      "is_correct": true,
+      "score": 0,
+      "level": "AMAN",
+      "reasons": [
+        "Tidak ditemukan permintaan data rahasia seperti OTP, PIN, atau kata sandi.",
+        "Struktur pesan wajar tanpa indikasi manipulasi psikologis atau desakan mendesak.",
+        "Tidak ditemukan tautan berbahaya atau pengunduhan file tidak dikenal."
+      ],
+      "breakdown": [],
+      "latency_ms": 3382.86,
+      "content": "Pak, ini file laporan keuangan bulanan kos-kosan format excel Laporan_Agustus.xlsx sudah saya kirim ke email bapak ya."
+    },
+    {
+      "id": "m079",
+      "type": "message",
+      "ground_truth": "legit",
+      "predicted": "legit",
+      "is_correct": true,
+      "score": 10,
+      "level": "AMAN",
+      "reasons": [
+        "Menyebutkan penawaran hadiah atau promo yang menarik perhatian."
+      ],
+      "breakdown": [
+        {
+          "signal": "prize_bait_medium",
+          "points": 10
+        }
+      ],
+      "latency_ms": 3486.51,
+      "content": "Promo Akhir Bulan: Cuci AC rumah diskon 50% hanya Rp 35.000 per unit. Booking teknisi via WhatsApp di 087788990011."
+    },
+    {
+      "id": "m080",
+      "type": "message",
+      "ground_truth": "scam",
+      "predicted": "legit",
+      "is_correct": false,
+      "score": 28,
+      "level": "AMAN",
+      "reasons": [
+        "Terdapat indikasi desakan waktu untuk segera merespons.",
+        "Pesan mengatasnamakan institusi tertentu yang perlu diverifikasi keabsahannya.",
+        "Menyebutkan penawaran hadiah atau promo yang menarik perhatian."
+      ],
+      "breakdown": [
+        {
+          "signal": "urgency_medium",
+          "points": 8
+        },
+        {
+          "signal": "false_authority_medium",
+          "points": 10
+        },
+        {
+          "signal": "prize_bait_medium",
+          "points": 10
+        }
+      ],
+      "latency_ms": 9972.88,
+      "content": "Pinjaman dana cepat cair jaminan BPKB motor/mobil tanpa BI checking. Proses 1 jam cair. Hubungi marketing resmi di 08139..."
+    },
+    {
+      "id": "m081",
+      "type": "message",
+      "ground_truth": "scam",
+      "predicted": "scam",
+      "is_correct": true,
+      "score": 58,
+      "level": "HATI-HATI",
+      "reasons": [
+        "Alamat domain mencatut nama 'DANA Indonesia' tetapi bukan domain resmi institusi tersebut.",
+        "Menggunakan ekstensi domain berisiko tinggi (.club) yang lazim dipakai phishing murah.",
+        "Terdapat indikasi desakan waktu untuk segera merespons.",
+        "Menyebutkan penawaran hadiah atau promo yang menarik perhatian."
+      ],
+      "breakdown": [
+        {
+          "signal": "watchlist_similarity",
+          "points": 25
+        },
+        {
+          "signal": "risky_tld",
+          "points": 15
+        },
+        {
+          "signal": "urgency_medium",
+          "points": 8
+        },
+        {
+          "signal": "prize_bait_medium",
+          "points": 10
+        }
+      ],
+      "latency_ms": 4560.37,
+      "content": "Butuh dana mendesak tanpa agunan bunga 0% 30 hari pertama. Ajukan online di dana-instan.club/apply sekarang juga."
+    },
+    {
+      "id": "m082",
+      "type": "message",
+      "ground_truth": "legit",
+      "predicted": "legit",
+      "is_correct": true,
+      "score": 20,
+      "level": "AMAN",
+      "reasons": [
+        "Pesan mengatasnamakan institusi tertentu yang perlu diverifikasi keabsahannya.",
+        "Menyebutkan penawaran hadiah atau promo yang menarik perhatian."
+      ],
+      "breakdown": [
+        {
+          "signal": "false_authority_medium",
+          "points": 10
+        },
+        {
+          "signal": "prize_bait_medium",
+          "points": 10
+        }
+      ],
+      "latency_ms": 3621.32,
+      "content": "Selamat ulang tahun dari Manajemen Hotel Santika. Nikmati diskon menginap 25% khusus member santika-online.com di bulan ..."
+    },
+    {
+      "id": "m083",
+      "type": "message",
+      "ground_truth": "legit",
+      "predicted": "legit",
+      "is_correct": true,
+      "score": 18,
+      "level": "AMAN",
+      "reasons": [
+        "Terdapat indikasi desakan waktu untuk segera merespons.",
+        "Pesan mengatasnamakan institusi tertentu yang perlu diverifikasi keabsahannya."
+      ],
+      "breakdown": [
+        {
+          "signal": "urgency_medium",
+          "points": 8
+        },
+        {
+          "signal": "false_authority_medium",
+          "points": 10
+        }
+      ],
+      "latency_ms": 3352.69,
+      "content": "Pemberitahuan Servis Berkala Motor Honda: Jadwal servis berkala motor B 1234 ABC Anda jatuh tempo pada 31 Agustus 2026 d..."
+    },
+    {
+      "id": "m084",
+      "type": "message",
+      "ground_truth": "scam",
+      "predicted": "scam",
+      "is_correct": true,
+      "score": 50,
+      "level": "HATI-HATI",
+      "reasons": [
+        "Alamat domain mencatut nama 'Shopee Indonesia' tetapi bukan domain resmi institusi tersebut.",
+        "Menjanjikan hadiah uang tunai atau saldo gratis yang tidak masuk akal."
+      ],
+      "breakdown": [
+        {
+          "signal": "watchlist_similarity",
+          "points": 25
+        },
+        {
+          "signal": "prize_bait_high",
+          "points": 25
+        }
+      ],
+      "latency_ms": 4318.81,
+      "content": "Mau saldo e-wallet gratis Rp 50.000? Cukup undang 3 teman kamu untuk install aplikasi belanja ini via link referral: sho..."
+    },
+    {
+      "id": "m085",
+      "type": "message",
+      "ground_truth": "legit",
+      "predicted": "legit",
+      "is_correct": true,
+      "score": 0,
+      "level": "AMAN",
+      "reasons": [
+        "Tidak ditemukan permintaan data rahasia seperti OTP, PIN, atau kata sandi.",
+        "Struktur pesan wajar tanpa indikasi manipulasi psikologis atau desakan mendesak.",
+        "Tidak ditemukan tautan berbahaya atau pengunduhan file tidak dikenal."
+      ],
+      "breakdown": [],
+      "latency_ms": 3297.16,
+      "content": "Pengingat Janji Temu Dokter Gigi: Jadwal pemeriksaan gigi Anda dengan drg. Anita besok Jumat pukul 16.00 di Klinik Denta..."
+    },
+    {
+      "id": "m086",
+      "type": "message",
+      "ground_truth": "scam",
+      "predicted": "legit",
+      "is_correct": false,
+      "score": 0,
+      "level": "AMAN",
+      "reasons": [
+        "Tidak ditemukan permintaan data rahasia seperti OTP, PIN, atau kata sandi.",
+        "Struktur pesan wajar tanpa indikasi manipulasi psikologis atau desakan mendesak.",
+        "Tidak ditemukan tautan berbahaya atau pengunduhan file tidak dikenal."
+      ],
+      "breakdown": [],
+      "latency_ms": 4028.08,
+      "content": "Jual mobil tarikan leasing Honda HR-V 2023 mulus tangan pertama surat lengkap harga Rp 120jt nego. Hubungi WhatsApp 0858..."
+    },
+    {
+      "id": "m087",
+      "type": "message",
+      "ground_truth": "legit",
+      "predicted": "legit",
+      "is_correct": true,
+      "score": 18,
+      "level": "AMAN",
+      "reasons": [
+        "Terdapat indikasi desakan waktu untuk segera merespons.",
+        "Pesan mengatasnamakan institusi tertentu yang perlu diverifikasi keabsahannya."
+      ],
+      "breakdown": [
+        {
+          "signal": "urgency_medium",
+          "points": 8
+        },
+        {
+          "signal": "false_authority_medium",
+          "points": 10
+        }
+      ],
+      "latency_ms": 3700.04,
+      "content": "Tagihan Internet MyRepublic No Pelanggan 1092810 sebesar Rp 385.000 jatuh tempo 5 September 2026. Bayar via ATM BCA / Ma..."
+    },
+    {
+      "id": "m088",
+      "type": "message",
+      "ground_truth": "legit",
+      "predicted": "legit",
+      "is_correct": true,
+      "score": 8,
+      "level": "AMAN",
+      "reasons": [
+        "Terdapat indikasi desakan waktu untuk segera merespons."
+      ],
+      "breakdown": [
+        {
+          "signal": "urgency_medium",
+          "points": 8
+        }
+      ],
+      "latency_ms": 3463.77,
+      "content": "Lowongan Barista Full Time / Part Time Coffee Shop Senopati. Kirim CV dan portfolio ke email recruitment@kopisenja.co.id..."
+    },
+    {
+      "id": "m089",
+      "type": "message",
+      "ground_truth": "legit",
+      "predicted": "legit",
+      "is_correct": true,
+      "score": 25,
+      "level": "AMAN",
+      "reasons": [
+        "URL disamarkan melalui 2 tahapan pengalihan (redirect).",
+        "Menyebutkan penawaran hadiah atau promo yang menarik perhatian."
+      ],
+      "breakdown": [
+        {
+          "signal": "multi_hop_redirect",
+          "points": 15
+        },
+        {
+          "signal": "prize_bait_medium",
+          "points": 10
+        }
+      ],
+      "latency_ms": 5474.81,
+      "content": "Paket outbound gathering kantor Bandung murah fasilitas lengkap rafting & paintball. Info paket hubungi 081299881122."
+    },
+    {
+      "id": "m090",
+      "type": "message",
+      "ground_truth": "legit",
+      "predicted": "legit",
+      "is_correct": true,
+      "score": 28,
+      "level": "AMAN",
+      "reasons": [
+        "Terdapat indikasi desakan waktu untuk segera merespons.",
+        "Pesan mengatasnamakan institusi tertentu yang perlu diverifikasi keabsahannya.",
+        "Menyebutkan penawaran hadiah atau promo yang menarik perhatian."
+      ],
+      "breakdown": [
+        {
+          "signal": "urgency_medium",
+          "points": 8
+        },
+        {
+          "signal": "false_authority_medium",
+          "points": 10
+        },
+        {
+          "signal": "prize_bait_medium",
+          "points": 10
+        }
+      ],
+      "latency_ms": 4202.75,
+      "content": "Peringatan: Kuota internet darurat 1GB Rp 1.000 berlaku 1 hari. Balas YA untuk mengaktifkan paket darurat Telkomsel."
+    },
+    {
+      "id": "d001",
+      "type": "domain",
+      "ground_truth": "scam",
+      "predicted": "scam",
+      "is_correct": true,
+      "score": 98,
+      "level": "INDIKASI PENIPUAN",
+      "reasons": [
+        "Kemiripan domain dengan Bank Central Asia (keyword)"
+      ],
+      "breakdown": [
+        {
+          "signal": "keyword",
+          "points": 98
+        }
+      ],
+      "latency_ms": 4.14,
+      "content": "bca-update-tarif.online"
+    },
+    {
+      "id": "d002",
+      "type": "domain",
+      "ground_truth": "scam",
+      "predicted": "scam",
+      "is_correct": true,
+      "score": 92,
+      "level": "INDIKASI PENIPUAN",
+      "reasons": [
+        "Kemiripan domain dengan Bank Mandiri (keyword)"
+      ],
+      "breakdown": [
+        {
+          "signal": "keyword",
+          "points": 92
+        }
+      ],
+      "latency_ms": 3.4,
+      "content": "bankmandiri-promo.xyz"
+    },
+    {
+      "id": "d003",
+      "type": "domain",
+      "ground_truth": "scam",
+      "predicted": "scam",
+      "is_correct": true,
+      "score": 98,
+      "level": "INDIKASI PENIPUAN",
+      "reasons": [
+        "Kemiripan domain dengan Bank Central Asia (keyword)"
+      ],
+      "breakdown": [
+        {
+          "signal": "keyword",
+          "points": 98
+        }
+      ],
+      "latency_ms": 3.67,
+      "content": "bca.promo-site.xyz"
+    },
+    {
+      "id": "d004",
+      "type": "domain",
+      "ground_truth": "scam",
+      "predicted": "scam",
+      "is_correct": true,
+      "score": 89,
+      "level": "INDIKASI PENIPUAN",
+      "reasons": [
+        "Kemiripan domain dengan Tokopedia (edit_distance)"
+      ],
+      "breakdown": [
+        {
+          "signal": "edit_distance",
+          "points": 89
+        }
+      ],
+      "latency_ms": 3.58,
+      "content": "tokopdia.com"
+    },
+    {
+      "id": "d005",
+      "type": "domain",
+      "ground_truth": "scam",
+      "predicted": "scam",
+      "is_correct": true,
+      "score": 92,
+      "level": "INDIKASI PENIPUAN",
+      "reasons": [
+        "Kemiripan domain dengan Traveloka (keyword)"
+      ],
+      "breakdown": [
+        {
+          "signal": "keyword",
+          "points": 92
+        }
+      ],
+      "latency_ms": 3.18,
+      "content": "traveloka-resmi.site"
+    },
+    {
+      "id": "d006",
+      "type": "domain",
+      "ground_truth": "scam",
+      "predicted": "scam",
+      "is_correct": true,
+      "score": 88,
+      "level": "INDIKASI PENIPUAN",
+      "reasons": [
+        "Kemiripan domain dengan Indodax Indonesia (edit_distance)"
+      ],
+      "breakdown": [
+        {
+          "signal": "edit_distance",
+          "points": 88
+        }
+      ],
+      "latency_ms": 3.4,
+      "content": "indodaxx.com"
+    },
+    {
+      "id": "d007",
+      "type": "domain",
+      "ground_truth": "scam",
+      "predicted": "scam",
+      "is_correct": true,
+      "score": 98,
+      "level": "INDIKASI PENIPUAN",
+      "reasons": [
+        "Kemiripan domain dengan Bank Negara Indonesia (keyword)"
+      ],
+      "breakdown": [
+        {
+          "signal": "keyword",
+          "points": 98
+        }
+      ],
+      "latency_ms": 4.25,
+      "content": "bni-mobile-aktivasi.top"
+    },
+    {
+      "id": "d008",
+      "type": "domain",
+      "ground_truth": "scam",
+      "predicted": "scam",
+      "is_correct": true,
+      "score": 92,
+      "level": "INDIKASI PENIPUAN",
+      "reasons": [
+        "Kemiripan domain dengan DANA Indonesia (keyword)"
+      ],
+      "breakdown": [
+        {
+          "signal": "keyword",
+          "points": 92
+        }
+      ],
+      "latency_ms": 2.8,
+      "content": "dana-kaget.site"
+    },
+    {
+      "id": "d009",
+      "type": "domain",
+      "ground_truth": "scam",
+      "predicted": "scam",
+      "is_correct": true,
+      "score": 92,
+      "level": "INDIKASI PENIPUAN",
+      "reasons": [
+        "Kemiripan domain dengan ShopeePay Indonesia (keyword)"
+      ],
+      "breakdown": [
+        {
+          "signal": "keyword",
+          "points": 92
+        }
+      ],
+      "latency_ms": 3.27,
+      "content": "shopeepay-reward.online"
+    },
+    {
+      "id": "d010",
+      "type": "domain",
+      "ground_truth": "scam",
+      "predicted": "scam",
+      "is_correct": true,
+      "score": 92,
+      "level": "INDIKASI PENIPUAN",
+      "reasons": [
+        "Kemiripan domain dengan Bank Rakyat Indonesia (keyword)"
+      ],
+      "breakdown": [
+        {
+          "signal": "keyword",
+          "points": 92
+        }
+      ],
+      "latency_ms": 3.28,
+      "content": "gebyar-brimo.vip"
+    },
+    {
+      "id": "d011",
+      "type": "domain",
+      "ground_truth": "scam",
+      "predicted": "scam",
+      "is_correct": true,
+      "score": 98,
+      "level": "INDIKASI PENIPUAN",
+      "reasons": [
+        "Kemiripan domain dengan Perusahaan Listrik Negara (keyword)"
+      ],
+      "breakdown": [
+        {
+          "signal": "keyword",
+          "points": 98
+        }
+      ],
+      "latency_ms": 3.07,
+      "content": "pln-online.top"
+    },
+    {
+      "id": "d012",
+      "type": "domain",
+      "ground_truth": "scam",
+      "predicted": "scam",
+      "is_correct": true,
+      "score": 92,
+      "level": "INDIKASI PENIPUAN",
+      "reasons": [
+        "Kemiripan domain dengan BPJS Kesehatan (keyword)"
+      ],
+      "breakdown": [
+        {
+          "signal": "keyword",
+          "points": 92
+        }
+      ],
+      "latency_ms": 2.09,
+      "content": "bpjs-subsidi.site"
+    },
+    {
+      "id": "d013",
+      "type": "domain",
+      "ground_truth": "scam",
+      "predicted": "legit",
+      "is_correct": false,
+      "score": 0,
+      "level": "AMAN",
+      "reasons": [
+        "Domain resmi / tidak mencatut institusi."
+      ],
+      "breakdown": [],
+      "latency_ms": 97.82,
+      "content": "kemkominfo-verifikasi.xyz"
+    },
+    {
+      "id": "d014",
+      "type": "domain",
+      "ground_truth": "scam",
+      "predicted": "scam",
+      "is_correct": true,
+      "score": 92,
+      "level": "INDIKASI PENIPUAN",
+      "reasons": [
+        "Kemiripan domain dengan Bank Syariah Indonesia (keyword)"
+      ],
+      "breakdown": [
+        {
+          "signal": "keyword",
+          "points": 92
+        }
+      ],
+      "latency_ms": 3.43,
+      "content": "bankbsi-layanan.top"
+    },
+    {
+      "id": "d015",
+      "type": "domain",
+      "ground_truth": "scam",
+      "predicted": "scam",
+      "is_correct": true,
+      "score": 92,
+      "level": "INDIKASI PENIPUAN",
+      "reasons": [
+        "Kemiripan domain dengan Telkomsel (keyword)"
+      ],
+      "breakdown": [
+        {
+          "signal": "keyword",
+          "points": 92
+        }
+      ],
+      "latency_ms": 2.03,
+      "content": "poin-telkomsel.vip"
+    },
+    {
+      "id": "d016",
+      "type": "domain",
+      "ground_truth": "legit",
+      "predicted": "legit",
+      "is_correct": true,
+      "score": 0,
+      "level": "AMAN",
+      "reasons": [
+        "Domain resmi / tidak mencatut institusi."
+      ],
+      "breakdown": [],
+      "latency_ms": 0.04,
+      "content": "bca.co.id"
+    },
+    {
+      "id": "d017",
+      "type": "domain",
+      "ground_truth": "legit",
+      "predicted": "legit",
+      "is_correct": true,
+      "score": 0,
+      "level": "AMAN",
+      "reasons": [
+        "Domain resmi / tidak mencatut institusi."
+      ],
+      "breakdown": [],
+      "latency_ms": 0.04,
+      "content": "bankmandiri.co.id"
+    },
+    {
+      "id": "d018",
+      "type": "domain",
+      "ground_truth": "legit",
+      "predicted": "legit",
+      "is_correct": true,
+      "score": 0,
+      "level": "AMAN",
+      "reasons": [
+        "Domain resmi / tidak mencatut institusi."
+      ],
+      "breakdown": [],
+      "latency_ms": 0.04,
+      "content": "bri.co.id"
+    },
+    {
+      "id": "d019",
+      "type": "domain",
+      "ground_truth": "legit",
+      "predicted": "legit",
+      "is_correct": true,
+      "score": 0,
+      "level": "AMAN",
+      "reasons": [
+        "Domain resmi / tidak mencatut institusi."
+      ],
+      "breakdown": [],
+      "latency_ms": 0.04,
+      "content": "bni.co.id"
+    },
+    {
+      "id": "d020",
+      "type": "domain",
+      "ground_truth": "legit",
+      "predicted": "legit",
+      "is_correct": true,
+      "score": 0,
+      "level": "AMAN",
+      "reasons": [
+        "Domain resmi / tidak mencatut institusi."
+      ],
+      "breakdown": [],
+      "latency_ms": 0.04,
+      "content": "bankbsi.co.id"
+    },
+    {
+      "id": "d021",
+      "type": "domain",
+      "ground_truth": "legit",
+      "predicted": "legit",
+      "is_correct": true,
+      "score": 0,
+      "level": "AMAN",
+      "reasons": [
+        "Domain resmi / tidak mencatut institusi."
+      ],
+      "breakdown": [],
+      "latency_ms": 0.09,
+      "content": "tokopedia.com"
+    },
+    {
+      "id": "d022",
+      "type": "domain",
+      "ground_truth": "legit",
+      "predicted": "legit",
+      "is_correct": true,
+      "score": 0,
+      "level": "AMAN",
+      "reasons": [
+        "Domain resmi / tidak mencatut institusi."
+      ],
+      "breakdown": [],
+      "latency_ms": 0.08,
+      "content": "shopee.co.id"
+    },
+    {
+      "id": "d023",
+      "type": "domain",
+      "ground_truth": "legit",
+      "predicted": "legit",
+      "is_correct": true,
+      "score": 0,
+      "level": "AMAN",
+      "reasons": [
+        "Domain resmi / tidak mencatut institusi."
+      ],
+      "breakdown": [],
+      "latency_ms": 0.09,
+      "content": "traveloka.com"
+    },
+    {
+      "id": "d024",
+      "type": "domain",
+      "ground_truth": "legit",
+      "predicted": "legit",
+      "is_correct": true,
+      "score": 0,
+      "level": "AMAN",
+      "reasons": [
+        "Domain resmi / tidak mencatut institusi."
+      ],
+      "breakdown": [],
+      "latency_ms": 0.09,
+      "content": "tiket.com"
+    },
+    {
+      "id": "d025",
+      "type": "domain",
+      "ground_truth": "legit",
+      "predicted": "legit",
+      "is_correct": true,
+      "score": 0,
+      "level": "AMAN",
+      "reasons": [
+        "Domain resmi / tidak mencatut institusi."
+      ],
+      "breakdown": [],
+      "latency_ms": 0.06,
+      "content": "dana.id"
+    },
+    {
+      "id": "d026",
+      "type": "domain",
+      "ground_truth": "legit",
+      "predicted": "legit",
+      "is_correct": true,
+      "score": 0,
+      "level": "AMAN",
+      "reasons": [
+        "Domain resmi / tidak mencatut institusi."
+      ],
+      "breakdown": [],
+      "latency_ms": 0.09,
+      "content": "pajak.go.id"
+    },
+    {
+      "id": "d027",
+      "type": "domain",
+      "ground_truth": "legit",
+      "predicted": "legit",
+      "is_correct": true,
+      "score": 0,
+      "level": "AMAN",
+      "reasons": [
+        "Domain resmi / tidak mencatut institusi."
+      ],
+      "breakdown": [],
+      "latency_ms": 0.13,
+      "content": "bpjs-kesehatan.go.id"
+    },
+    {
+      "id": "d028",
+      "type": "domain",
+      "ground_truth": "legit",
+      "predicted": "legit",
+      "is_correct": true,
+      "score": 0,
+      "level": "AMAN",
+      "reasons": [
+        "Domain resmi / tidak mencatut institusi."
+      ],
+      "breakdown": [],
+      "latency_ms": 0.1,
+      "content": "pln.co.id"
+    },
+    {
+      "id": "d029",
+      "type": "domain",
+      "ground_truth": "legit",
+      "predicted": "legit",
+      "is_correct": true,
+      "score": 0,
+      "level": "AMAN",
+      "reasons": [
+        "Domain resmi / tidak mencatut institusi."
+      ],
+      "breakdown": [],
+      "latency_ms": 0.1,
+      "content": "telkomsel.com"
+    },
+    {
+      "id": "d030",
+      "type": "domain",
+      "ground_truth": "legit",
+      "predicted": "legit",
+      "is_correct": true,
+      "score": 0,
+      "level": "AMAN",
+      "reasons": [
+        "Domain resmi / tidak mencatut institusi."
+      ],
+      "breakdown": [],
+      "latency_ms": 16.49,
+      "content": "google.com"
+    }
+  ]
+}

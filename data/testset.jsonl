@@ -88,21 +88,21 @@
 {"id": "m088", "type": "message", "content": "Lowongan Barista Full Time / Part Time Coffee Shop Senopati. Kirim CV dan portfolio ke email recruitment@kopisenja.co.id sebelum 5 September.", "label": "legit", "category": "loker_resmi", "source": "publik_ambigu"}
 {"id": "m089", "type": "message", "content": "Paket outbound gathering kantor Bandung murah fasilitas lengkap rafting & paintball. Info paket hubungi 081299881122.", "label": "legit", "category": "iklan_wisata", "source": "publik_ambigu"}
 {"id": "m090", "type": "message", "content": "Peringatan: Kuota internet darurat 1GB Rp 1.000 berlaku 1 hari. Balas YA untuk mengaktifkan paket darurat Telkomsel.", "label": "legit", "category": "telekomunikasi_resmi", "source": "publik_ambigu"}
-{"id": "d001", "type": "domain", "content": "bca-update-tarif.online", "label": "scam", "category": "bank_bca_phishing", "source": "mode_b_verified"}
-{"id": "d002", "type": "domain", "content": "bankmandiri-promo.xyz", "label": "scam", "category": "bank_mandiri_phishing", "source": "mode_b_verified"}
-{"id": "d003", "type": "domain", "content": "bca.promo-site.xyz", "label": "scam", "category": "bank_bca_subdomain_phishing", "source": "mode_b_verified"}
-{"id": "d004", "type": "domain", "content": "tokopdia.com", "label": "scam", "category": "tokopedia_typosquatting", "source": "mode_b_verified"}
-{"id": "d005", "type": "domain", "content": "traveloka-resmi.site", "label": "scam", "category": "traveloka_phishing", "source": "mode_b_verified"}
-{"id": "d006", "type": "domain", "content": "indodaxx.com", "label": "scam", "category": "indodax_typosquatting", "source": "mode_b_verified"}
-{"id": "d007", "type": "domain", "content": "bni-mobile-aktivasi.top", "label": "scam", "category": "bni_phishing", "source": "mode_b_verified"}
-{"id": "d008", "type": "domain", "content": "dana-kaget.site", "label": "scam", "category": "dana_phishing", "source": "mode_b_verified"}
-{"id": "d009", "type": "domain", "content": "shopeepay-reward.online", "label": "scam", "category": "shopee_phishing", "source": "mode_b_verified"}
-{"id": "d010", "type": "domain", "content": "gebyar-brimo.vip", "label": "scam", "category": "bri_phishing", "source": "mode_b_verified"}
-{"id": "d011", "type": "domain", "content": "pln-online.top", "label": "scam", "category": "pln_phishing", "source": "mode_b_verified"}
-{"id": "d012", "type": "domain", "content": "bpjs-subsidi.site", "label": "scam", "category": "bpjs_phishing", "source": "mode_b_verified"}
-{"id": "d013", "type": "domain", "content": "kemkominfo-verifikasi.xyz", "label": "scam", "category": "kominfo_phishing", "source": "mode_b_verified"}
-{"id": "d014", "type": "domain", "content": "bankbsi-layanan.top", "label": "scam", "category": "bsi_phishing", "source": "mode_b_verified"}
-{"id": "d015", "type": "domain", "content": "poin-telkomsel.vip", "label": "scam", "category": "telkomsel_phishing", "source": "mode_b_verified"}
+{"id": "d001", "type": "domain", "content": "bca-update-tarif.online", "label": "scam", "category": "bank_bca_phishing", "source": "sintetis"}
+{"id": "d002", "type": "domain", "content": "bankmandiri-promo.xyz", "label": "scam", "category": "bank_mandiri_phishing", "source": "sintetis"}
+{"id": "d003", "type": "domain", "content": "bca.promo-site.xyz", "label": "scam", "category": "bank_bca_subdomain_phishing", "source": "sintetis"}
+{"id": "d004", "type": "domain", "content": "tokopdia.com", "label": "scam", "category": "tokopedia_typosquatting", "source": "sintetis"}
+{"id": "d005", "type": "domain", "content": "traveloka-resmi.site", "label": "scam", "category": "traveloka_phishing", "source": "sintetis"}
+{"id": "d006", "type": "domain", "content": "indodaxx.com", "label": "scam", "category": "indodax_typosquatting", "source": "sintetis"}
+{"id": "d007", "type": "domain", "content": "bni-mobile-aktivasi.top", "label": "scam", "category": "bni_phishing", "source": "sintetis"}
+{"id": "d008", "type": "domain", "content": "dana-kaget.site", "label": "scam", "category": "dana_phishing", "source": "sintetis"}
+{"id": "d009", "type": "domain", "content": "shopeepay-reward.online", "label": "scam", "category": "shopee_phishing", "source": "sintetis"}
+{"id": "d010", "type": "domain", "content": "gebyar-brimo.vip", "label": "scam", "category": "bri_phishing", "source": "sintetis"}
+{"id": "d011", "type": "domain", "content": "pln-online.top", "label": "scam", "category": "pln_phishing", "source": "sintetis"}
+{"id": "d012", "type": "domain", "content": "bpjs-subsidi.site", "label": "scam", "category": "bpjs_phishing", "source": "sintetis"}
+{"id": "d013", "type": "domain", "content": "kemkominfo-verifikasi.xyz", "label": "scam", "category": "kominfo_phishing", "source": "sintetis"}
+{"id": "d014", "type": "domain", "content": "bankbsi-layanan.top", "label": "scam", "category": "bsi_phishing", "source": "sintetis"}
+{"id": "d015", "type": "domain", "content": "poin-telkomsel.vip", "label": "scam", "category": "telkomsel_phishing", "source": "sintetis"}
 {"id": "d016", "type": "domain", "content": "bca.co.id", "label": "legit", "category": "bank_bca_resmi", "source": "publik_resmi"}
 {"id": "d017", "type": "domain", "content": "bankmandiri.co.id", "label": "legit", "category": "bank_mandiri_resmi", "source": "publik_resmi"}
 {"id": "d018", "type": "domain", "content": "bri.co.id", "label": "legit", "category": "bank_bri_resmi", "source": "publik_resmi"}

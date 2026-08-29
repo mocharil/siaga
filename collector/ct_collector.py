@@ -38,14 +38,39 @@ CTLOGS_ID_TLDS = ["co.id", "go.id", "ac.id", "or.id", "web.id"]
 # query approach later if needed.
 
 REQUEST_DELAY_SECONDS = 1.0
-REQUEST_TIMEOUT_SECONDS = 30
+REQUEST_TIMEOUT_SECONDS = 15
 MAX_PAGES_PER_TLD = 200  # Safety: 200 pages * 100 rows = 20k per TLD
+TLD_MAX_DURATION_SECONDS = 180  # Max 3 minutes per TLD guard to prevent hanging
 USER_AGENT = "SIAGA-CT-Collector/0.1 (security research)"
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 DB_PATH = BASE_DIR / "data" / "siaga.db"
 LOG_DIR = BASE_DIR / "logs"
 LOG_PATH = LOG_DIR / "collector.log"
+
+# Windows Sleep Prevention Flags
+ES_CONTINUOUS = 0x80000000
+ES_SYSTEM_REQUIRED = 0x00000001
+
+
+def _prevent_sleep() -> None:
+    """Prevent Windows OS from entering sleep/suspend during collector run."""
+    if sys.platform == "win32":
+        try:
+            import ctypes
+            ctypes.windll.kernel32.SetThreadExecutionState(ES_CONTINUOUS | ES_SYSTEM_REQUIRED)
+        except Exception:
+            pass
+
+
+def _allow_sleep() -> None:
+    """Release sleep prevention lock on Windows OS."""
+    if sys.platform == "win32":
+        try:
+            import ctypes
+            ctypes.windll.kernel32.SetThreadExecutionState(ES_CONTINUOUS)
+        except Exception:
+            pass
 
 # ---------------------------------------------------------------------------
 # Logging
@@ -242,6 +267,7 @@ def _fetch_from_ctlogs(
     failed_tlds = 0
 
     for tld in tlds:
+        tld_start = time.monotonic()
         tld_domains: dict[str, datetime] = {}
         url = f"{CTLOGS_BASE_URL}/v1/subdomains/{tld}"
         page_num = 0
@@ -249,6 +275,15 @@ def _fetch_from_ctlogs(
         tld_failed = False
 
         while page_num < MAX_PAGES_PER_TLD:
+            if (time.monotonic() - tld_start) > TLD_MAX_DURATION_SECONDS:
+                logger.warning(
+                    "TLD .%s exceeded max duration guard (%.1fs) — moving to next TLD",
+                    tld,
+                    time.monotonic() - tld_start,
+                )
+                tld_failed = True
+                break
+
             logger.info("Fetching .%s page %d …", tld, page_num)
             data = _ctlogs_fetch_page(url, api_key)
 
@@ -396,6 +431,8 @@ def main() -> None:
     log_path = Path(os.environ.get("SIAGA_LOG_PATH", str(LOG_PATH)))
     setup_logging(log_path)
 
+    _prevent_sleep()
+
     source = os.environ.get("CT_SOURCE", "ctlogs_id")
     db_path = Path(os.environ.get("SIAGA_DB_PATH", str(DB_PATH)))
 
@@ -416,49 +453,52 @@ def main() -> None:
     error_message = None
 
     try:
-        count_before = conn.execute("SELECT COUNT(*) FROM ct_raw").fetchone()[0]
+        try:
+            count_before = conn.execute("SELECT COUNT(*) FROM ct_raw").fetchone()[0]
 
-        records, fetch_status = fetch_recent_domains(since, source)
-        fetched = len(records)
-        status = fetch_status
+            records, fetch_status = fetch_recent_domains(since, source)
+            fetched = len(records)
+            status = fetch_status
 
-        now_iso = started_at.isoformat()
-        for domain, not_before in records:
-            nb_iso = (
-                not_before.isoformat()
-                if isinstance(not_before, datetime)
-                else not_before
+            now_iso = started_at.isoformat()
+            for domain, not_before in records:
+                nb_iso = (
+                    not_before.isoformat()
+                    if isinstance(not_before, datetime)
+                    else not_before
+                )
+                conn.execute(
+                    "INSERT OR IGNORE INTO ct_raw (domain, first_seen, not_before, source) "
+                    "VALUES (?, ?, ?, ?)",
+                    (domain, now_iso, nb_iso, source),
+                )
+            conn.commit()
+
+            count_after = conn.execute("SELECT COUNT(*) FROM ct_raw").fetchone()[0]
+            inserted_new = count_after - count_before
+
+        except NotImplementedError as e:
+            error_message = str(e)
+            status = "failed"
+            logger.error("Source not implemented: %s", e)
+        except Exception as e:
+            error_message = str(e)
+            status = "failed"
+            logger.error("Collector failed: %s", e, exc_info=True)
+
+        finished_at = datetime.now(timezone.utc)
+
+        try:
+            record_run(
+                conn, started_at, finished_at, source,
+                fetched, inserted_new, status, error_message,
             )
-            conn.execute(
-                "INSERT OR IGNORE INTO ct_raw (domain, first_seen, not_before, source) "
-                "VALUES (?, ?, ?, ?)",
-                (domain, now_iso, nb_iso, source),
-            )
-        conn.commit()
+        except Exception as e:
+            logger.error("Failed to record run: %s", e)
 
-        count_after = conn.execute("SELECT COUNT(*) FROM ct_raw").fetchone()[0]
-        inserted_new = count_after - count_before
-
-    except NotImplementedError as e:
-        error_message = str(e)
-        status = "failed"
-        logger.error("Source not implemented: %s", e)
-    except Exception as e:
-        error_message = str(e)
-        status = "failed"
-        logger.error("Collector failed: %s", e, exc_info=True)
-
-    finished_at = datetime.now(timezone.utc)
-
-    try:
-        record_run(
-            conn, started_at, finished_at, source,
-            fetched, inserted_new, status, error_message,
-        )
-    except Exception as e:
-        logger.error("Failed to record run: %s", e)
-
-    conn.close()
+        conn.close()
+    finally:
+        _allow_sleep()
 
     # --- Print and log summary ---
     duration = (finished_at - started_at).total_seconds()

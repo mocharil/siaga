@@ -299,75 +299,61 @@ def complete(
 
 
 def _heuristic_linguistic_fallback(text: str) -> dict:
-    """Rule-based heuristic fallback for linguistic analysis when LLM API key is unconfigured."""
+    """Generic heuristic linguistic fallback when LLM API is unavailable.
+
+    Uses abstract grammatical and lexical patterns without dataset-specific phrases.
+    """
     lower = text.lower()
     dangerous: list[str] = []
 
-    # 1. OTP / Credential Request Detection (excluding official outbound warnings)
-    is_official_warning = any(k in lower for k in [
-        "jangan berikan kode ini",
-        "jangan bagikan kode ini",
-        "jangan beritahu siapapun",
-        "rahasia jangan berikan",
-    ])
+    # 1. Credential / Security Secret Exfiltration (Active Verbs + Sensitive Tokens)
+    has_active_request = bool(re.search(r"\b(minta|kirim|masukkan|isi|input|sebutkan|balas|konfirmasi|ketik)\b", lower))
+    is_outbound_security_advisory = bool(re.search(r"\b(jangan\s+(berikan|bagikan|beritahu)|rahasia)\b", lower))
 
-    if not is_official_warning:
-        if any(k in lower for k in [
-            "sebutkan 4 digit", "sebutkan 6 digit", "sebutkan kode otp", "minta otp",
-            "kirimkan balik", "salah kirim", "sms verifikasi game", "minta kode",
-            "masukkan pin", "masukkan user id", "masukkan password", "verifikasi kartu atm",
-        ]):
+    if has_active_request and not is_outbound_security_advisory:
+        if re.search(r"\b(otp|one[\s-]?time[\s-]?password|kode\s+(verifikasi|sms|keamanan))\b", lower):
             dangerous.append("otp")
-        elif any(k in lower for k in ["otp", "one time password", "kode sms verifikasi"]) and any(k in lower for k in ["kirim", "minta", "sebutkan", "balas"]):
-            dangerous.append("otp")
+        if re.search(r"\b(pin|mpin|pin\s+atm|passcode)\b", lower):
+            dangerous.append("pin")
+        if re.search(r"\b(password|kata\s+sandi)\b", lower):
+            dangerous.append("password")
 
-    if any(k in lower for k in ["pin atm", "mpin", "masukkan pin"]):
-        dangerous.append("pin")
-    if any(k in lower for k in ["password", "kata sandi"]) and any(k in lower for k in ["masukkan", "isi", "input"]):
-        dangerous.append("password")
-
-    # 2. APK Malware Vectors (Sniffer APK)
-    if any(k in lower for k in [".apk", "file apk", "install file", "surat_tilang", "undangan_resepsi", "lihat_foto", "dokumen_klaim", "e-faktur", "sertifikat_vaksin"]):
+    # 2. Dangerous Application File Execution (.apk)
+    if re.search(r"\.apk\b|\b(install|unduh|pasang)\s+aplikasi\b", lower):
         dangerous.append("apk")
 
-    # 3. Advance Fee / Fraudulent Transfers / Ponzi / Illegal Lenders / Fake Tasks
-    if any(k in lower for k in [
-        "transfer deposit", "uang muka", "biaya administrasi pencairan", "titip dana",
-        "komisi rp", "nonton video dapat", "like produk komisi", "grup bimbingan vip",
-        "bunga 5%/hari", "kontak disebar", "tarikan leasing", "titip dana kripto",
-        "modal rp 500rb", "dana-instan.club",
-    ]):
+    # 3. Unsolicited Advance Fee / Upfront Transfer
+    if re.search(r"\b(transfer\s+(uang|dana|deposit|uang\s*muka)|biaya\s+(admin|pendaftaran|aktivasi)|titip\s+dana)\b", lower):
         dangerous.append("transfer")
 
     if not dangerous:
         dangerous.append("none")
 
-    # Urgency detection
+    # 4. Urgency & Coercion (Time Constraints / Account Blocking)
     urgency = 0
-    if any(k in lower for k in ["segera", "malam ini", "1x24 jam", "sebelum pukul", "blokir", "darurat", "otomatis", "kontak disebar", "denda", "menunggak"]):
-        urgency = 2 if any(k in lower for k in ["blokir", "otomatis", "darurat", "sebelum pukul", "kontak disebar", "malam ini"]) else 1
+    if re.search(r"\b(segera|darurat|1x24\s*jam|dalam\s+\d+\s*(menit|jam)|sebelum\s+(jam|pukul)|blokir|denda|menunggak)\b", lower):
+        urgency = 2 if re.search(r"\b(blokir|darurat|segera|dalam\s+\d+\s*menit)\b", lower) else 1
 
-    # False authority detection (excluding genuine notifications from verified apps)
+    # 5. False Authority / Official Impersonation
     false_authority = 0
-    is_official_notification = any(k in lower for k in [
-        "halobca 1500888", "call bri 1500017", "bni call 1500046", "bsi call 14040", "halo permata 1500111",
-        "trsf e-banking", "qris sebesar", "pembelian token", "pesanan nomor inv",
-    ])
-    if not is_official_notification:
-        if any(k in lower for k in ["bca", "bri", "mandiri", "bni", "djp", "pajak", "polri", "pln", "kemenkeu", "ojk", "bi", "kemkominfo", "korlantas"]):
-            false_authority = 2 if any(k in lower for k in ["surat", "resmi", "pemberitahuan", "peringatan", "customer care", "ditjen"]) else 1
+    if re.search(r"\b(surat\s+resmi|pemberitahuan\s+resmi|peringatan\s+resmi|customer\s+care\s+resmi|ditjen|kementerian)\b", lower):
+        false_authority = 2
+    elif re.search(r"\b(resmi|peringatan|pemberitahuan|notifikasi)\b", lower):
+        false_authority = 1
 
-    # Prize bait / financial lure detection
+    # 6. Prize Bait / Unrealistic Financial Lure
     prize_bait = 0
-    if any(k in lower for k in ["selamat", "menang", "dana kaget", "hadiah", "undian", "gratis", "bonus", "profit rp", "komisi rp"]):
-        prize_bait = 3 if any(k in lower for k in ["rp", "juta", "grand prize", "honda brio", "1.850.000", "500.000/hari"]) else 2
+    if re.search(r"\b(selamat\s+anda\s+(menang|terpilih)|grand\s+prize|undian\s+berhadiah|dana\s+kaget|saldo\s+gratis)\b", lower):
+        prize_bait = 3 if re.search(r"\b(rp|juta|gratis|mobil|hadiah\s+utama)\b", lower) else 2
+    elif re.search(r"\b(bonus|cashback|voucher|hadiah|diskon)\b", lower):
+        prize_bait = 1
 
     return {
         "urgency": urgency,
         "false_authority": false_authority,
         "prize_bait": prize_bait,
         "dangerous_request": dangerous,
-        "reasoning": "Analisis linguistik berbasis aturan heuristik terkalibrasi.",
+        "reasoning": "Analisis linguistik berbasis aturan heuristik generik (LLM offline).",
     }
 
 
@@ -402,6 +388,6 @@ def analyze_linguistics(
             db_path=db_path,
             model=model,
         )
-    except LLMProviderError as e:
-        logger.warning("LLM provider call failed (%s); using heuristic linguistic fallback.", e)
+    except (LLMProviderError, LLMBudgetExceeded) as e:
+        logger.warning("LLM API call bypassed (%s); using generic heuristic fallback.", e)
         return _heuristic_linguistic_fallback(text)

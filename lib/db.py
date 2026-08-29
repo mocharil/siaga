@@ -52,7 +52,12 @@ def init_db(db_path: Path | str | None = None) -> None:
             """
             CREATE TABLE IF NOT EXISTS collector_runs (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
-                run_at TIMESTAMP NOT NULL,
+                started_at TIMESTAMP,
+                finished_at TIMESTAMP,
+                run_at TIMESTAMP,
+                source TEXT,
+                fetched INTEGER DEFAULT 0,
+                inserted_new INTEGER DEFAULT 0,
                 domains_found INTEGER,
                 domains_new INTEGER,
                 status TEXT,
@@ -60,6 +65,23 @@ def init_db(db_path: Path | str | None = None) -> None:
             )
             """
         )
+        cur = conn.execute("PRAGMA table_info(collector_runs)")
+        cr_cols = [row[1] for row in cur.fetchall()]
+        for col_name, col_type in [
+            ("started_at", "TIMESTAMP"),
+            ("finished_at", "TIMESTAMP"),
+            ("run_at", "TIMESTAMP"),
+            ("source", "TEXT"),
+            ("fetched", "INTEGER DEFAULT 0"),
+            ("inserted_new", "INTEGER DEFAULT 0"),
+            ("domains_found", "INTEGER"),
+            ("domains_new", "INTEGER"),
+        ]:
+            if col_name not in cr_cols:
+                try:
+                    conn.execute(f"ALTER TABLE collector_runs ADD COLUMN {col_name} {col_type}")
+                except Exception:
+                    pass
 
         # 3. Domain Findings (Mode B2 / Backlog rescoring)
         conn.execute(
