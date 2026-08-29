@@ -245,6 +245,7 @@ def _parse_rdap_json(domain: str, data: dict) -> DomainInfo:
 def lookup(
     domain: str,
     db_path: str | Path | None = None,
+    allow_network: bool = True,
     timeout: float = DEFAULT_TIMEOUT,
 ) -> DomainInfo | None:
     """Perform RDAP lookup for a domain with caching, bootstrap routing, and error resilience.
@@ -252,6 +253,7 @@ def lookup(
     Args:
         domain: Fully-qualified domain name to query (e.g. "google.com", "pandi.id").
         db_path: Optional path to SQLite database for caching. Defaults to data/siaga.db.
+        allow_network: Whether to allow network requests on cache miss.
         timeout: HTTP request timeout in seconds (default: 5.0).
 
     Returns:
@@ -304,6 +306,10 @@ def lookup(
                     logger.debug("Error parsing cache row for %s: %s", clean_domain, e)
     except sqlite3.Error as e:
         logger.warning("Database error querying rdap_cache: %s", e)
+
+    # If network requests are disabled, do not proceed to bootstrap resolution / HTTP
+    if not allow_network:
+        return None
 
     # 2. Resolve RDAP query URL via bootstrap
     tld = clean_domain.split(".")[-1]

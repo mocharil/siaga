@@ -138,10 +138,21 @@ def init_db(db_path: Path | str | None = None) -> None:
                 flagged_not_in_blacklist INTEGER DEFAULT 0,
                 collector_ok BOOLEAN DEFAULT 0,
                 heartbeat_ok BOOLEAN DEFAULT 0,
-                peak_ram_mb INTEGER DEFAULT 0
+                peak_ram_mb INTEGER DEFAULT 0,
+                tahap1_passed INTEGER DEFAULT 0,
+                tahap2_passed INTEGER DEFAULT 0,
+                tahap3_assessed INTEGER DEFAULT 0
             )
             """
         )
+        cur = conn.execute("PRAGMA table_info(daily_stats)")
+        ds_cols = [row[1] for row in cur.fetchall()]
+        for col_name in ["tahap1_passed", "tahap2_passed", "tahap3_assessed"]:
+            if col_name not in ds_cols:
+                try:
+                    conn.execute(f"ALTER TABLE daily_stats ADD COLUMN {col_name} INTEGER DEFAULT 0")
+                except Exception:
+                    pass
 
         # 6. Monitored Watchlist Table
         conn.execute(
