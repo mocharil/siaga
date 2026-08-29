@@ -18,6 +18,7 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 if str(BASE_DIR) not in sys.path:
     sys.path.insert(0, str(BASE_DIR))
 
+from lib.campaign import apply_campaign_labels
 from lib.db import init_db
 from lib.pipeline import run_tiered_pipeline
 
@@ -114,6 +115,21 @@ def main() -> None:
     print("EXACT FUNNEL RATIO:")
     print(f"  {metrics.summary_ratio()}")
     print("=" * 65 + "\n")
+
+    # T23 — cluster findings into campaigns (nameserver reuse, then brand
+    # pattern) after this run's findings have been persisted. Idempotent
+    # over the whole domain_findings table, not just today's batch, so a
+    # campaign spanning multiple days is still caught.
+    if not args.dry_run:
+        campaign_summary = apply_campaign_labels(db_path=args.db_path)
+        print("=" * 65)
+        print("      SIAGA CAMPAIGN CLUSTERING (T23)")
+        print("=" * 65)
+        print(f"Nameserver clusters         : {campaign_summary.nameserver_clusters_found}")
+        print(f"  domains labeled           : {campaign_summary.nameserver_domains_labeled}")
+        print(f"Brand-pattern clusters      : {campaign_summary.brand_pattern_clusters_found}")
+        print(f"  domains labeled           : {campaign_summary.brand_pattern_domains_labeled}")
+        print("=" * 65 + "\n")
 
 
 if __name__ == "__main__":

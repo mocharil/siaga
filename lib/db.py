@@ -103,7 +103,35 @@ def init_db(db_path: Path | str | None = None) -> None:
                 human_verdict TEXT,
                 in_public_blacklist_at_detection BOOLEAN,
                 blacklist_checked_at TIMESTAMP,
-                blacklist_listed_at TIMESTAMP
+                blacklist_listed_at TIMESTAMP,
+                campaign_id INTEGER
+            )
+            """
+        )
+        cur = conn.execute("PRAGMA table_info(domain_findings)")
+        df_cols = [row[1] for row in cur.fetchall()]
+        if "campaign_id" not in df_cols:
+            try:
+                conn.execute("ALTER TABLE domain_findings ADD COLUMN campaign_id INTEGER")
+            except Exception:
+                pass
+
+        # 3b. Campaigns (T23) — clusters of findings sharing infrastructure
+        # (same nameserver signature) or a coincidental naming pattern
+        # (same targeted brand within a short time window). cluster_type
+        # distinguishes a hard technical fact (nameserver reuse = same
+        # operator) from a softer heuristic (brand_pattern), since the two
+        # should never be presented to a judge/user with equal confidence.
+        conn.execute(
+            """
+            CREATE TABLE IF NOT EXISTS campaigns (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                cluster_type TEXT NOT NULL,
+                cluster_key TEXT NOT NULL,
+                member_count INTEGER NOT NULL,
+                first_detected_at TIMESTAMP NOT NULL,
+                last_updated_at TIMESTAMP NOT NULL,
+                UNIQUE(cluster_type, cluster_key)
             )
             """
         )
