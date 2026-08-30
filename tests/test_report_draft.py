@@ -87,8 +87,8 @@ def test_verified_official_channel_contacts():
     Verified Sources (Aug 2026):
     1. BSSN Gov-CSIRT: bantuan70@bssn.go.id, (021) 78833610, WA 0812-8135-4598 (https://www.bssn.go.id/aduan-siber/)
     2. Kominfo AduanKonten: aduankonten@kominfo.go.id, WA 08119224545, https://www.aduankonten.id (https://www.aduankonten.id/kontak-kami)
-    3. PANDI Abuse: abuse@pandi.id, helpdesk@pandi.id, (021) 80862000 (https://pandi.id/blog/peran-pandi-dalam-penanganan-penyalahgunaan-nama-domain-id)
-    4. OJK 157 & Satgas PASTI: konsumen@ojk.go.id, satgaspasti@ojk.go.id, 157, WA 081157157157 (https://x.com/ojkindonesia/status/1704793665238077502)
+    3. PANDI Hubungi Kami & IDADX: abuse@pandi.id, helpdesk@pandi.id, Telp +62-21-30055777, https://idadx.id/report (https://pandi.id/kontak)
+    4. OJK 157 & Satgas PASTI: konsumen@ojk.go.id, satgaspasti@ojk.go.id, 157, WA 081157157157 (https://x.com/ojkindonesia/status/1704793665238077502 & https://kontak157.ojk.go.id)
     """
     channels = get_recommended_channels("secure-login.bankbca.id", "Bank Central Asia")
 
@@ -108,9 +108,13 @@ def test_verified_official_channel_contacts():
     # PANDI Abuse checks
     assert "abuse@pandi.id" in contacts_str, "PANDI abuse email must be abuse@pandi.id"
     assert "helpdesk@pandi.id" in contacts_str, "PANDI helpdesk email must be helpdesk@pandi.id"
+    assert "+62-21-30055777" in contacts_str, "PANDI official phone must be +62-21-30055777"
+    assert "80862000" not in contacts_str, "Unverified/incorrect 80862000 must never appear"
+    assert "idadx.id/report" in contacts_str, "PANDI IDADX abuse portal must be present"
 
     # OJK & Satgas PASTI checks
     assert "konsumen@ojk.go.id" in contacts_str, "OJK Consumer email must be konsumen@ojk.go.id"
     assert "satgaspasti@ojk.go.id" in contacts_str, "Satgas PASTI email must be satgaspasti@ojk.go.id"
     assert "157" in contacts_str, "OJK 157 call center must be present"
     assert "081157157157" in contacts_str, "OJK WhatsApp hotline must be present"
+    assert "kontak157.ojk.go.id" in contacts_str, "OJK official portal must be present"

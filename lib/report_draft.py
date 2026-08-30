@@ -60,7 +60,7 @@ def get_recommended_channels(domain: str, brand: str) -> list[ReportingChannel]:
 
     Source Verifications:
     - Kominfo AduanKonten: https://www.aduankonten.id/kontak-kami & https://aptika.kominfo.go.id/kontak/ (Aug 2026)
-    - PANDI Abuse Desk: https://pandi.id/blog/peran-pandi-dalam-penanganan-penyalahgunaan-nama-domain-id (Aug 2026)
+    - PANDI Hubungi Kami & IDADX: https://pandi.id/kontak & https://idadx.id/report (Aug 2026)
     - OJK 157 & Satgas PASTI: https://x.com/ojkindonesia/status/1704793665238077502 & https://kontak157.ojk.go.id (Aug 2026)
     - BSSN Gov-CSIRT: https://www.bssn.go.id/aduan-siber/ & https://idsirtii.or.id/halaman/tentang/rfc-2350-gov-csirt-indonesia.html (Aug 2026)
     """
@@ -77,14 +77,14 @@ def get_recommended_channels(domain: str, brand: str) -> list[ReportingChannel]:
 
     clean_dom = domain.lower().strip()
     # Check if .id domain
-    # Verified via https://pandi.id/blog/peran-pandi-dalam-penanganan-penyalahgunaan-nama-domain-id (Aug 2026)
+    # Verified via https://pandi.id/kontak (Telp: +62-21-30055777) & https://idadx.id/report (Abuse Desk) (Aug 2026)
     if clean_dom.endswith(".id"):
         channels.append(
             ReportingChannel(
                 name="PANDI (Pengelola Nama Domain Internet Indonesia)",
                 target_type="Registry .ID",
-                contact="abuse@pandi.id | helpdesk@pandi.id | Telp: (021) 80862000",
-                submission_method="Email Abuse Desk (abuse@pandi.id) / Portal https://pandi.id",
+                contact="abuse@pandi.id | helpdesk@pandi.id | Telp: +62-21-30055777",
+                submission_method="Email Abuse Desk (abuse@pandi.id) / Portal IDADX https://idadx.id/report",
                 notes="Permohonan penangguhan (suspend) nama domain .id yang terindikasi phishing.",
             )
         )
@@ -92,7 +92,7 @@ def get_recommended_channels(domain: str, brand: str) -> list[ReportingChannel]:
     # If banking or financial institution
     brand_lower = brand.lower() if brand else ""
     if any(k in brand_lower for k in ("bank", "bca", "bni", "bri", "mandiri", "dana", "ovo", "gopay", "ojk", "bi")):
-        # Verified via https://x.com/ojkindonesia/status/1704793665238077502 (Aug 2026)
+        # Verified via https://x.com/ojkindonesia/status/1704793665238077502 & https://kontak157.ojk.go.id (Aug 2026)
         channels.append(
             ReportingChannel(
                 name="Kontak OJK 157 & Satgas PASTI",
