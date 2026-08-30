@@ -47,6 +47,8 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 DB_PATH = BASE_DIR / "data" / "siaga.db"
 LOG_DIR = BASE_DIR / "logs"
 LOG_PATH = LOG_DIR / "collector.log"
+LOCK_PATH = BASE_DIR / "data" / ".collector.lock"
+LOCK_STALE_SECONDS = 2 * 3600  # normal run is ~5 min; anything older is dead
 
 # Windows Sleep Prevention Flags
 ES_CONTINUOUS = 0x80000000
@@ -71,6 +73,58 @@ def _allow_sleep() -> None:
             ctypes.windll.kernel32.SetThreadExecutionState(ES_CONTINUOUS)
         except Exception:
             pass
+
+
+def _acquire_lock(lock_path: Path) -> bool:
+    """Atomically create a lock file to prevent two collector instances
+    running concurrently against the same SQLite database.
+
+    Real incident this guards against: a Task Scheduler StartWhenAvailable
+    catch-up run and a manual invocation landed 43 seconds apart on
+    2026-08-30, racing each other against ct_raw. SQLite's UNIQUE(domain)
+    happened to save it that time, but nothing stopped both processes from
+    hammering ctlogs.dev at the same time -- effectively doubling the
+    self-imposed 1 req/sec rate limit against the upstream API.
+
+    A stale lock (process died without cleanup) older than
+    LOCK_STALE_SECONDS is reclaimed automatically rather than requiring
+    manual intervention -- staleness is judged by file age, not PID
+    liveness, to keep this dependency-free and portable to the future
+    Linux VPS.
+    """
+    lock_path.parent.mkdir(parents=True, exist_ok=True)
+
+    if lock_path.exists():
+        age = time.time() - lock_path.stat().st_mtime
+        if age > LOCK_STALE_SECONDS:
+            logger.warning(
+                "Stale lock file found (age %.0fs > %ds threshold); reclaiming.",
+                age, LOCK_STALE_SECONDS,
+            )
+            try:
+                lock_path.unlink()
+            except OSError:
+                pass
+        else:
+            return False
+
+    try:
+        fd = os.open(str(lock_path), os.O_CREAT | os.O_EXCL | os.O_WRONLY)
+        with os.fdopen(fd, "w") as f:
+            f.write(f"{os.getpid()} {datetime.now(timezone.utc).isoformat()}\n")
+        return True
+    except FileExistsError:
+        return False
+
+
+def _release_lock(lock_path: Path) -> None:
+    try:
+        lock_path.unlink()
+    except FileNotFoundError:
+        pass
+    except OSError as e:
+        logger.warning("Failed to release lock file %s: %s", lock_path, e)
+
 
 # ---------------------------------------------------------------------------
 # Logging
@@ -431,6 +485,22 @@ def main() -> None:
     log_path = Path(os.environ.get("SIAGA_LOG_PATH", str(LOG_PATH)))
     setup_logging(log_path)
 
+    lock_path = Path(os.environ.get("SIAGA_COLLECTOR_LOCK_PATH", str(LOCK_PATH)))
+    if not _acquire_lock(lock_path):
+        logger.warning(
+            "Another collector instance appears to be running (lock: %s). "
+            "Skipping this run rather than racing it.", lock_path,
+        )
+        print("\nSIAGA CT Collector — SKIPPED (another instance already running)\n")
+        sys.exit(0)
+
+    try:
+        _run(log_path)
+    finally:
+        _release_lock(lock_path)
+
+
+def _run(log_path: Path) -> None:
     _prevent_sleep()
 
     source = os.environ.get("CT_SOURCE", "ctlogs_id")

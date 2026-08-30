@@ -24,6 +24,9 @@ from collector.ct_collector import (
     _fetch_from_ctlogs,
     fetch_recent_domains,
     setup_logging,
+    _acquire_lock,
+    _release_lock,
+    LOCK_STALE_SECONDS,
 )
 
 
@@ -526,3 +529,52 @@ class TestLogging:
 
         content = log_file.read_text(encoding="utf-8")
         assert "Test log message: hello-siaga" in content
+
+
+# ---------------------------------------------------------------------------
+# Concurrency lock (guards against the 2026-08-30 incident: Task Scheduler
+# StartWhenAvailable catch-up + a manual invocation racing 43 seconds apart)
+# ---------------------------------------------------------------------------
+
+
+class TestCollectorLock:
+    def test_acquire_lock_succeeds_when_no_lock_exists(self, tmp_path):
+        lock_path = tmp_path / ".collector.lock"
+        assert _acquire_lock(lock_path) is True
+        assert lock_path.exists()
+
+    def test_acquire_lock_fails_when_fresh_lock_exists(self, tmp_path):
+        lock_path = tmp_path / ".collector.lock"
+        assert _acquire_lock(lock_path) is True
+        # Second acquisition attempt while the first lock is still fresh.
+        assert _acquire_lock(lock_path) is False
+
+    def test_release_lock_allows_reacquisition(self, tmp_path):
+        lock_path = tmp_path / ".collector.lock"
+        assert _acquire_lock(lock_path) is True
+        _release_lock(lock_path)
+        assert not lock_path.exists()
+        assert _acquire_lock(lock_path) is True
+
+    def test_release_lock_missing_file_does_not_raise(self, tmp_path):
+        lock_path = tmp_path / ".collector.lock"
+        _release_lock(lock_path)  # must not raise even though nothing exists
+
+    def test_stale_lock_is_reclaimed(self, tmp_path):
+        import os as _os
+        import time as _time
+
+        lock_path = tmp_path / ".collector.lock"
+        lock_path.write_text("99999999 stale\n")
+        stale_mtime = _time.time() - (LOCK_STALE_SECONDS + 60)
+        _os.utime(lock_path, (stale_mtime, stale_mtime))
+
+        assert _acquire_lock(lock_path) is True
+
+    def test_lock_content_contains_pid(self, tmp_path):
+        import os as _os
+
+        lock_path = tmp_path / ".collector.lock"
+        _acquire_lock(lock_path)
+        content = lock_path.read_text()
+        assert str(_os.getpid()) in content

@@ -6,3 +6,4 @@ eval_errors_*.json
 __pycache__/
 *.log
 .venv/
+.collector.lock
