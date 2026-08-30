@@ -44,43 +44,50 @@ class WatchlistEntry:
     match_mode: str
     clean_terms: list[tuple[str, str, int, set[str]]]  # (term, term_clean, len, char_set)
     off_stem: str
+    off_stem_len: int
+    off_stem_set: set[str]
 
 
 _WATCHLIST_CACHE: list[WatchlistEntry] | None = None
+_OFFICIAL_DOMAINS_SET: set[str] | None = None
 
 
-def damerau_levenshtein_distance(s1: str, s2: str) -> int:
-    """Fast Damerau-Levenshtein distance calculation with transposition."""
-    s1, s2 = s1.lower(), s2.lower()
-    len1, len2 = len(s1), len(s2)
-
+def damerau_levenshtein_distance(s1: str, s2: str, max_dist: int = 100) -> int:
+    """Fast Damerau-Levenshtein distance calculation with transposition and early length pruning."""
     if s1 == s2:
         return 0
+
+    len1, len2 = len(s1), len(s2)
+    if abs(len1 - len2) > max_dist:
+        return max_dist + 1
+
     if len1 == 0:
         return len2
     if len2 == 0:
         return len1
 
-    # Matrix
+    # Matrix allocation
     d = [[0] * (len2 + 2) for _ in range(len1 + 2)]
-    max_dist = len1 + len2
-    d[0][0] = max_dist
+    boundary_max = len1 + len2
+    d[0][0] = boundary_max
 
     for i in range(0, len1 + 1):
-        d[i + 1][0] = max_dist
+        d[i + 1][0] = boundary_max
         d[i + 1][1] = i
     for j in range(0, len2 + 1):
-        d[0][j + 1] = max_dist
+        d[0][j + 1] = boundary_max
         d[1][j + 1] = j
 
     da: dict[str, int] = {}
 
     for i in range(1, len1 + 1):
         db = 0
+        c1 = s1[i - 1]
         for j in range(1, len2 + 1):
-            k = da.get(s2[j - 1], 0)
+            c2 = s2[j - 1]
+            k = da.get(c2, 0)
             l = db
-            cost = 0 if s1[i - 1] == s2[j - 1] else 1
+            cost = 0 if c1 == c2 else 1
             if cost == 0:
                 db = j
 
@@ -90,14 +97,14 @@ def damerau_levenshtein_distance(s1: str, s2: str) -> int:
                 d[i][j] + cost,         # Substitution
                 d[k][l] + (i - k - 1) + 1 + (j - l - 1),  # Transposition
             )
-        da[s1[i - 1]] = i
+        da[c1] = i
 
     return d[len1 + 1][len2 + 1]
 
 
 def load_watchlist(csv_path: Path | str | None = None) -> list[WatchlistEntry]:
     """Load, pre-index, and cache institutional watchlist from CSV."""
-    global _WATCHLIST_CACHE
+    global _WATCHLIST_CACHE, _OFFICIAL_DOMAINS_SET
     if _WATCHLIST_CACHE is not None and csv_path is None:
         return _WATCHLIST_CACHE
 
@@ -107,11 +114,14 @@ def load_watchlist(csv_path: Path | str | None = None) -> list[WatchlistEntry]:
         return []
 
     entries: list[WatchlistEntry] = []
+    off_set = set()
+
     with open(resolved_path, mode="r", encoding="utf-8") as f:
         reader = csv.DictReader(f)
         for row in reader:
             brand = row["brand_name"].strip()
             off_domain = row["official_domain"].strip().lower()
+            off_set.add(off_domain)
             raw_aliases = [brand] + [a.strip() for a in row["aliases"].split(";") if a.strip()]
 
             clean_terms: list[tuple[str, str, int, set[str]]] = []
@@ -131,10 +141,13 @@ def load_watchlist(csv_path: Path | str | None = None) -> list[WatchlistEntry]:
                 match_mode=row["match_mode"].strip(),
                 clean_terms=clean_terms,
                 off_stem=off_stem,
+                off_stem_len=len(off_stem),
+                off_stem_set=set(off_stem),
             ))
 
     if csv_path is None:
         _WATCHLIST_CACHE = entries
+        _OFFICIAL_DOMAINS_SET = off_set
     return entries
 
 
@@ -171,34 +184,42 @@ def find_similar(
     if not clean_domain or "." not in clean_domain:
         return []
 
-    raw_entries = watchlist if watchlist is not None else load_watchlist(watchlist_path)
-    if not raw_entries:
-        return []
-
-    # Normalize entries to WatchlistEntry objects
-    entries: list[WatchlistEntry] = []
-    for item in raw_entries:
-        if isinstance(item, WatchlistEntry):
-            entries.append(item)
+    # Fast path: use cached WatchlistEntry objects directly
+    if watchlist is not None:
+        if watchlist and isinstance(watchlist[0], WatchlistEntry):
+            entries: list[WatchlistEntry] = watchlist  # type: ignore
         else:
-            b = item["brand_name"].strip()
-            od = item["official_domain"].strip().lower()
-            aliases = [b] + [a.strip() for a in item.get("aliases", "").split(";") if a.strip()]
-            clean_terms = []
-            seen_clean = set()
-            for t in aliases:
-                tc = t.lower().replace(" ", "")
-                if tc and tc not in seen_clean:
-                    seen_clean.add(tc)
-                    clean_terms.append((t, tc, len(tc)))
-            entries.append(WatchlistEntry(
-                brand_name=b,
-                official_domain=od,
-                category=item.get("category", ""),
-                match_mode=item.get("match_mode", "edit_distance"),
-                clean_terms=clean_terms,
-                off_stem=od.split(".")[0],
-            ))
+            entries = []
+            for item in watchlist:
+                if isinstance(item, WatchlistEntry):
+                    entries.append(item)
+                else:
+                    b = item["brand_name"].strip()
+                    od = item["official_domain"].strip().lower()
+                    aliases = [b] + [a.strip() for a in item.get("aliases", "").split(";") if a.strip()]
+                    clean_terms = []
+                    seen_clean = set()
+                    for t in aliases:
+                        tc = t.lower().replace(" ", "")
+                        if tc and tc not in seen_clean:
+                            seen_clean.add(tc)
+                            clean_terms.append((t, tc, len(tc), set(tc)))
+                    off_stem = od.split(".")[0]
+                    entries.append(WatchlistEntry(
+                        brand_name=b,
+                        official_domain=od,
+                        category=item.get("category", ""),
+                        match_mode=item.get("match_mode", "edit_distance"),
+                        clean_terms=clean_terms,
+                        off_stem=off_stem,
+                        off_stem_len=len(off_stem),
+                        off_stem_set=set(off_stem),
+                    ))
+    else:
+        entries = load_watchlist(watchlist_path)
+
+    if not entries:
+        return []
 
     # 1. Whitelist Check: If domain is official domain or subdomain -> NOT a match
     for entry in entries:
@@ -207,15 +228,19 @@ def find_similar(
             return []
 
     # 2. Institutional TLD Safety Rules:
-    # - .go.id domains are strictly vetted by Kominfo; legitimate for government brands
-    # - .ac.id / .sch.id / .mil.id are strictly vetted academic/military institutions
     is_gov_tld = clean_domain.endswith(".go.id")
     is_academic_tld = clean_domain.endswith(".ac.id") or clean_domain.endswith(".sch.id") or clean_domain.endswith(".mil.id")
 
     domain_labels = _extract_domain_labels(clean_domain)
+    if not domain_labels:
+        return []
+
+    # Precompute label metadata once for all techniques
+    label_meta = [(lbl, len(lbl), set(lbl), "-" in lbl) for lbl in domain_labels]
+
     decoded_domain, is_punycode = decode_punycode(clean_domain)
     homoglyph_domain = normalize_homoglyphs(decoded_domain)
-    homoglyph_labels = _extract_domain_labels(homoglyph_domain)
+    has_homoglyphs = is_punycode or (homoglyph_domain != clean_domain)
 
     # --------------------------------------------------------------------------
     # TECHNIQUE 1: Keyword in Misleading Position (Subdomain / Hyphen)
@@ -233,7 +258,8 @@ def find_similar(
             if is_academic_tld and term_len <= 4:
                 continue
 
-            for label in domain_labels:
+            matched = False
+            for label, label_len, _, has_hyphen in label_meta:
                 # Exact label match in non-official domain (e.g. bca.promo-site.xyz -> 'bca')
                 if label == term_clean:
                     keyword_matches.append(Match(
@@ -243,22 +269,27 @@ def find_similar(
                         similarity_score=0.98,
                         matched_term=term,
                     ))
+                    matched = True
                     break
 
                 # Word boundary / hyphenated match (e.g. 'klikbca-update', 'bank-mandiri')
-                if term_len >= 4 and (
-                    label.startswith(f"{term_clean}-")
-                    or label.endswith(f"-{term_clean}")
-                    or f"-{term_clean}-" in label
-                ):
-                    keyword_matches.append(Match(
-                        brand_name=brand,
-                        official_domain=off_domain,
-                        method="keyword",
-                        similarity_score=0.92,
-                        matched_term=term,
-                    ))
-                    break
+                if has_hyphen and term_len >= 4 and label_len > term_len:
+                    if (
+                        label.startswith(f"{term_clean}-")
+                        or label.endswith(f"-{term_clean}")
+                        or f"-{term_clean}-" in label
+                    ):
+                        keyword_matches.append(Match(
+                            brand_name=brand,
+                            official_domain=off_domain,
+                            method="keyword",
+                            similarity_score=0.92,
+                            matched_term=term,
+                        ))
+                        matched = True
+                        break
+            if matched:
+                break
 
     if keyword_matches:
         keyword_matches.sort(key=lambda m: m.similarity_score, reverse=True)
@@ -267,8 +298,9 @@ def find_similar(
     # --------------------------------------------------------------------------
     # TECHNIQUE 2: Homoglyph & Punycode Normalization
     # --------------------------------------------------------------------------
-    homoglyph_matches: list[Match] = []
-    if is_punycode or homoglyph_domain != clean_domain:
+    if has_homoglyphs:
+        homoglyph_labels = _extract_domain_labels(homoglyph_domain)
+        homoglyph_matches: list[Match] = []
         for entry in entries:
             brand = entry.brand_name
             off_domain = entry.official_domain
@@ -288,9 +320,9 @@ def find_similar(
                         ))
                         break
 
-    if homoglyph_matches:
-        homoglyph_matches.sort(key=lambda m: m.similarity_score, reverse=True)
-        return [homoglyph_matches[0]]
+        if homoglyph_matches:
+            homoglyph_matches.sort(key=lambda m: m.similarity_score, reverse=True)
+            return [homoglyph_matches[0]]
 
     # --------------------------------------------------------------------------
     # TECHNIQUE 3: Damerau-Levenshtein Distance with Set Pre-filtering
@@ -306,16 +338,15 @@ def find_similar(
 
             max_allowed_dist = 1 if term_len <= 5 else (MEDIUM_NAME_MAX_DIST if term_len <= 8 else LONG_NAME_MAX_DIST)
 
-            for label in domain_labels:
-                label_len = len(label)
+            for label, label_len, label_set, _ in label_meta:
                 if abs(label_len - term_len) > max_allowed_dist:
                     continue
 
                 # Set pre-filter: common characters must be at least (len - max_allowed_dist)
-                if len(set(label) & term_set) < (term_len - max_allowed_dist):
+                if len(label_set & term_set) < (term_len - max_allowed_dist):
                     continue
 
-                dist = damerau_levenshtein_distance(label, term_clean)
+                dist = damerau_levenshtein_distance(label, term_clean, max_dist=max_allowed_dist)
                 if 1 <= dist <= max_allowed_dist:
                     score = max(0.60, 1.0 - (dist / max(term_len, label_len)))
                     dl_matches.append(Match(
@@ -331,13 +362,21 @@ def find_similar(
         return [dl_matches[0]]
 
     # --------------------------------------------------------------------------
-    # TECHNIQUE 4: Directed Typo Permutations
+    # TECHNIQUE 4: Directed Typo Permutations with Early Length Pruning
     # --------------------------------------------------------------------------
     for entry in entries:
         off_stem = entry.off_stem
-        if len(off_stem) > 4:
-            for label in domain_labels:
-                if label != off_stem and damerau_levenshtein_distance(label, off_stem) == 1:
+        stem_len = entry.off_stem_len
+        if stem_len > 4:
+            stem_set = entry.off_stem_set
+            for label, label_len, label_set, _ in label_meta:
+                # Early exit: distance can only be 1 if length differs by at most 1
+                if abs(label_len - stem_len) > 1:
+                    continue
+                # Character overlap guard
+                if len(label_set & stem_set) < (stem_len - 1):
+                    continue
+                if label != off_stem and damerau_levenshtein_distance(label, off_stem, max_dist=1) == 1:
                     return [Match(
                         brand_name=entry.brand_name,
                         official_domain=entry.official_domain,

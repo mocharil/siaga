@@ -1,14 +1,13 @@
 #!/usr/bin/env python3
-"""Retroactive Backlog Rescoring Script (T20).
+"""[DEPRECATED / HISTORICAL T20 ONLY] Retroactive Backlog Rescoring Script.
 
-Processes raw Certificate Transparency backlog in ct_raw where processed_at IS NULL,
-executes high-throughput similarity filtering and risk evaluation, and stores identified
-phishing domains in domain_findings while preserving original historical first_seen timestamps.
+WARNING / ARSITEKTUR:
+Ini adalah skrip legacy dari Milestone M2 (Task T20).
+Untuk eksekusi produksi dan pemrosesan backlog berkalibrasi penuh (3-tier cascade +
+verifikasi teknis RDAP/Blacklist + LLM synthesis + deteksi kampanye), SELALU gunakan:
+  - lib/pipeline.py / scripts/run_pipeline.py (single source of truth).
 
-Features:
-- Idempotent and resumable: Safely handles interruptions (Ctrl+C).
-- Dry-run mode: Evaluates filter ratio and sample findings without modifying DB.
-- Rate-limiting and batch commits for optimal database throughput.
+Skrip ini hanya dipertahankan sebagai utilitas historis tanpa jaringan/LLM.
 """
 
 import argparse
