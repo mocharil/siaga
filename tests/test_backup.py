@@ -72,6 +72,54 @@ def test_perform_backup_force_weekly(sample_source_db, tmp_path):
     assert weekly_path.stat().st_size == daily_path.stat().st_size
 
 
+def test_perform_backup_sunday_wib_triggers_weekly_backup(sample_source_db, tmp_path):
+    """Verify that Sunday morning in WIB (Asia/Jakarta) correctly triggers weekly backup.
+
+    Why this test is crucial (Lessons from T06 incident):
+    If the backup job executes at 06:30 WIB on Sunday morning (2026-08-30 06:30+07:00),
+    the equivalent UTC timestamp is Saturday night (2026-08-29 23:30Z, weekday()=5).
+    Using UTC caused `is_sunday` to evaluate to False, silently skipping weekly backups.
+    This test verifies that timezone conversion to Asia/Jakarta correctly evaluates
+    weekday() == 6 (Sunday) and creates the weekly backup file without --force-weekly.
+    """
+    from zoneinfo import ZoneInfo
+    backup_root = tmp_path / "backups"
+
+    # Sunday 06:30 WIB = Saturday 23:30 UTC
+    sunday_morning_wib = datetime(2026, 8, 30, 6, 30, 0, tzinfo=ZoneInfo("Asia/Jakarta"))
+
+    daily_path, weekly_path = perform_backup(
+        db_path=sample_source_db,
+        backup_root=backup_root,
+        force_weekly=False,
+        now=sunday_morning_wib,
+    )
+
+    assert daily_path.exists()
+    assert weekly_path is not None
+    assert weekly_path.exists()
+    assert weekly_path.name == "siaga_weekly_2026-08-30.db"
+
+
+def test_perform_backup_non_sunday_wib_skips_weekly_backup(sample_source_db, tmp_path):
+    """Verify that non-Sunday runs in WIB do not create weekly backup unless forced."""
+    from zoneinfo import ZoneInfo
+    backup_root = tmp_path / "backups"
+
+    # Monday 06:30 WIB
+    monday_morning_wib = datetime(2026, 8, 31, 6, 30, 0, tzinfo=ZoneInfo("Asia/Jakarta"))
+
+    daily_path, weekly_path = perform_backup(
+        db_path=sample_source_db,
+        backup_root=backup_root,
+        force_weekly=False,
+        now=monday_morning_wib,
+    )
+
+    assert daily_path.exists()
+    assert weekly_path is None
+
+
 def test_perform_backup_retention_pruning(sample_source_db, tmp_path):
     """Verify daily backups older than 7 days are automatically pruned."""
     backup_root = tmp_path / "backups"

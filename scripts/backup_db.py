@@ -16,6 +16,7 @@ import shutil
 import sqlite3
 import sys
 import time
+from zoneinfo import ZoneInfo
 
 # Ensure repository root is on sys.path
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -31,6 +32,7 @@ logger = logging.getLogger("siaga.backup_db")
 DEFAULT_DB_PATH = BASE_DIR / "data" / "siaga.db"
 DEFAULT_BACKUP_DIR = BASE_DIR / "backups"
 DEFAULT_RETENTION_DAYS = 7
+WIB = ZoneInfo("Asia/Jakarta")
 
 
 def perform_backup(
@@ -38,6 +40,7 @@ def perform_backup(
     backup_root: Path | str = DEFAULT_BACKUP_DIR,
     retention_days: int = DEFAULT_RETENTION_DAYS,
     force_weekly: bool = False,
+    now: datetime | None = None,
 ) -> tuple[Path, Path | None]:
     """Execute consistent SQLite online backup and purge stale daily backups.
 
@@ -46,6 +49,7 @@ def perform_backup(
         backup_root: Directory to store backup archives.
         retention_days: Days of daily backups to preserve (default: 7).
         force_weekly: If True, always creates a copy in backups/weekly.
+        now: Optional reference datetime (injected for deterministic testing/timezone validation).
 
     Returns:
         tuple of (daily_backup_path, weekly_backup_path_or_none)
@@ -62,7 +66,13 @@ def perform_backup(
     if not resolved_db.exists():
         raise FileNotFoundError(f"Source database not found at {resolved_db}")
 
-    today_str = datetime.now(timezone.utc).strftime("%Y-%m-%d")
+    # Use WIB (Asia/Jakarta) timezone for day & calendar-date calculation
+    if now is not None:
+        ref_dt = now.astimezone(WIB) if now.tzinfo else now.replace(tzinfo=timezone.utc).astimezone(WIB)
+    else:
+        ref_dt = datetime.now(WIB)
+
+    today_str = ref_dt.strftime("%Y-%m-%d")
     daily_target = daily_dir / f"siaga_{today_str}.db"
 
     logger.info("Starting online backup from %s to %s...", resolved_db, daily_target)
@@ -81,14 +91,15 @@ def perform_backup(
     backup_size_mb = daily_target.stat().st_size / (1024 * 1024)
     logger.info("Daily backup completed successfully: %.2f MB in %.2fs", backup_size_mb, elapsed)
 
-    # Determine if weekly copy should be created (Sunday is weekday 6)
-    is_sunday = datetime.now(timezone.utc).weekday() == 6
+    # Determine if weekly copy should be created (Sunday is weekday 6 in WIB calendar)
+    is_sunday = ref_dt.weekday() == 6
     weekly_target: Path | None = None
 
     if is_sunday or force_weekly:
         weekly_target = weekly_dir / f"siaga_weekly_{today_str}.db"
         shutil.copy2(daily_target, weekly_target)
-        logger.info("Weekly backup archived at %s (%.2f MB)", weekly_target, backup_size_mb)
+        logger.info("Weekly backup archived at %s (%.2f MB) [WIB Sunday=%s, force=%s]",
+                    weekly_target, backup_size_mb, is_sunday, force_weekly)
 
     # Purge daily backups older than retention_days
     cutoff_time = time.time() - (retention_days * 86400)

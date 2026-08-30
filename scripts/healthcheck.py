@@ -80,31 +80,22 @@ class HealthCheckResult:
 
 
 def _connect_ro_with_retry(db_path: Path, max_attempts: int = 3, timeout: float = 5.0) -> sqlite3.Connection:
-    """Safely open SQLite connection in read-only mode with retries against disk I/O / WAL busy."""
+    """Safely open SQLite connection strictly in read-only mode with retries against disk I/O / WAL busy."""
     db_uri = f"file:{db_path.resolve().as_posix()}?mode=ro"
     last_err: Exception | None = None
 
     for attempt in range(1, max_attempts + 1):
         try:
             conn = sqlite3.connect(db_uri, uri=True, timeout=timeout)
-            # Simple probe query
+            # Simple read probe query
             conn.execute("SELECT 1").fetchone()
             return conn
-        except sqlite3.OperationalError as e:
+        except (sqlite3.OperationalError, Exception) as e:
             last_err = e
-            logger.warning("SQLite connection attempt %d failed (%s), retrying...", attempt, e)
+            logger.warning("SQLite read-only connection attempt %d failed (%s), retrying...", attempt, e)
             time.sleep(0.5 * attempt)
-        except Exception as e:
-            # Fallback to standard connection if URI mode fails
-            try:
-                conn = sqlite3.connect(str(db_path), timeout=timeout)
-                conn.execute("SELECT 1").fetchone()
-                return conn
-            except Exception as fallback_err:
-                last_err = fallback_err
-                time.sleep(0.5 * attempt)
 
-    raise sqlite3.OperationalError(f"Could not connect to database after {max_attempts} attempts: {last_err}")
+    raise sqlite3.OperationalError(f"Could not connect to database strictly in read-only mode after {max_attempts} attempts: {last_err}")
 
 
 def check_health(
@@ -229,13 +220,13 @@ def check_health(
 
             # Check if latest daily_stats date is stale (> 26 hours ago)
             try:
-                stat_dt = datetime.strptime(stat_date, "%Y-%m-%d").replace(tzinfo=timezone.utc)
-                # Consider start of day for comparison
-                date_diff_hours = (now_dt.date() - stat_dt.date()).days * 24.0
-                if date_diff_hours > max_staleness_hours:
+                # Interpret daily stat as being completed by 07:00 UTC (14:00 WIB) of that date
+                stat_dt = datetime.strptime(stat_date, "%Y-%m-%d").replace(hour=7, minute=0, second=0, tzinfo=timezone.utc)
+                elapsed_hb_hours = (now_dt - stat_dt).total_seconds() / 3600.0
+                if elapsed_hb_hours > max_staleness_hours:
                     result.is_healthy = False
                     result.issues.append(
-                        f"daily_stats terakhir sudah usang ({stat_date}, selisih ~{date_diff_hours:.0f} jam dari tanggal sekarang)."
+                        f"daily_stats terakhir sudah usang ({stat_date}, selisih {elapsed_hb_hours:.1f} jam dari waktu sekarang)."
                     )
             except Exception as date_err:
                 logger.warning("Could not parse daily_stats date %s: %s", stat_date, date_err)

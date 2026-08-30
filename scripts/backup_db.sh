@@ -20,7 +20,7 @@ RETENTION_DAYS=7
 mkdir -p "$DAILY_DIR"
 mkdir -p "$WEEKLY_DIR"
 
-TODAY="$(date -u +"%Y-%m-%d")"
+TODAY="$(TZ='Asia/Jakarta' date +"%Y-%m-%d")"
 DAILY_TARGET="$DAILY_DIR/siaga_${TODAY}.db"
 WEEKLY_TARGET="$WEEKLY_DIR/siaga_weekly_${TODAY}.db"
 
@@ -44,9 +44,9 @@ else
     sqlite3 "$DB_PATH" ".backup '$DAILY_TARGET'"
     echo "Daily backup saved: $(du -h "$DAILY_TARGET" | cut -f1)"
 
-    # Check if Sunday (weekday 7 / 0) for weekly archive
-    DOW="$(date -u +"%u")"
-    if [ "$DOW" -eq 7 ] || [ "$DOW" -eq 0 ]; then
+    # Check if Sunday in Asia/Jakarta (weekday 7) for weekly archive
+    DOW="$(TZ='Asia/Jakarta' date +"%u")"
+    if [ "$DOW" -eq 7 ]; then
         cp -p "$DAILY_TARGET" "$WEEKLY_TARGET"
         echo "Weekly backup saved: $WEEKLY_TARGET"
     fi
