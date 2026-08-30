@@ -135,19 +135,95 @@ def test_findings_top_endpoint_unmask_param(client):
     assert top_finding["raw_domain"] == "bankbca-klik-update.top"
 
 
-def test_metrics_endpoint(client):
-    """Verify /api/metrics delivers validated model metrics and system stats."""
+def test_metrics_endpoint_live_eval_data(client):
+    """Verify /api/metrics delivers dynamic model metrics from data/eval_results.json."""
     res = client.get("/api/metrics")
     assert res.status_code == 200
     data = res.json()
 
     assert data["precision_pct"] == 100.0
     assert data["recall_pct"] == 91.8
-    assert data["f1_score"] == 0.957
+    assert data["f1_score"] == 0.9573
+    assert data["metrics_available"] is True
     assert data["collector_uptime_pct"] == 100.0
     assert data["peak_ram_mb"] >= 45
     assert data["total_domains_scanned"] == (6500 + 9100)
     assert data["total_findings_flagged"] == (5 + 8)
+    assert "calibrated" in data["calibration_status"]
+
+
+def test_metrics_dynamic_file_change(client, tmp_path):
+    """Verify that modifying eval_results.json dynamically changes the /api/metrics response.
+
+    Why this test is crucial (Lessons from T06/CLAUDE.md Rule #2):
+    Hardcoded metrics disguise stale calibrations. This test injects custom eval numbers
+    (precision 87.5%, recall 76.2%) and proves the API returns these exact numbers.
+    """
+    import json
+    mock_eval = tmp_path / "mock_eval.json"
+    mock_eval.write_text(json.dumps({
+        "summary": {
+            "timestamp": "2026-09-01T12:00:00Z",
+            "metrics": {
+                "precision": 0.875,
+                "recall": 0.762,
+                "f1_score": 0.8145
+            }
+        }
+    }), encoding="utf-8")
+
+    app.state.eval_results_path = mock_eval
+    try:
+        res = client.get("/api/metrics")
+        assert res.status_code == 200
+        data = res.json()
+
+        assert data["precision_pct"] == 87.5
+        assert data["recall_pct"] == 76.2
+        assert data["f1_score"] == 0.8145
+        assert data["metrics_available"] is True
+        assert data["eval_timestamp"] == "2026-09-01T12:00:00Z"
+        assert data["calibration_status"] == "calibrated (2026-09-01)"
+    finally:
+        app.state.eval_results_path = None
+
+
+def test_metrics_missing_eval_file(client, tmp_path):
+    """Verify that when eval_results.json does not exist, /api/metrics returns nulls with metrics_available=False."""
+    non_existent = tmp_path / "does_not_exist_eval.json"
+    app.state.eval_results_path = non_existent
+    try:
+        res = client.get("/api/metrics")
+        assert res.status_code == 200
+        data = res.json()
+
+        assert data["metrics_available"] is False
+        assert data["precision_pct"] is None
+        assert data["recall_pct"] is None
+        assert data["f1_score"] is None
+        assert data["calibration_status"] == "uncalibrated"
+    finally:
+        app.state.eval_results_path = None
+
+
+def test_metrics_lead_time_calculation(client, test_db):
+    """Verify that avg_lead_time_hours calculates real duration when blacklist_listed_at is populated."""
+    with sqlite3.connect(str(test_db)) as conn:
+        conn.execute(
+            """
+            INSERT INTO domain_findings (domain, first_seen, blacklist_listed_at, risk_score)
+            VALUES ('phish1.xyz', '2026-08-28T00:00:00Z', '2026-08-29T06:00:00Z', 90),
+                   ('phish2.top', '2026-08-28T00:00:00Z', '2026-08-29T12:00:00Z', 90)
+            """
+        )
+        conn.commit()
+
+    res = client.get("/api/metrics")
+    assert res.status_code == 200
+    data = res.json()
+
+    # phish1: 30 hours, phish2: 36 hours -> average = 33.0 hours
+    assert data["avg_lead_time_hours"] == 33.0
 
 
 def test_health_endpoint(client):

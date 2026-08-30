@@ -266,9 +266,20 @@ def get_findings_top(
         }
 
 
+def get_eval_results_path() -> Path:
+    """Resolve eval_results.json path from app state, environment, or default."""
+    override = getattr(app.state, "eval_results_path", None)
+    if override:
+        return Path(override)
+    env_path = os.environ.get("SIAGA_EVAL_PATH")
+    if env_path:
+        return Path(env_path)
+    return BASE_DIR / "data" / "eval_results.json"
+
+
 @app.get("/api/metrics", summary="Fetch system performance & validation metrics")
 def get_metrics():
-    """Returns AI model validation metrics, collector uptime, RAM peak, and detection lead times."""
+    """Returns dynamic AI model validation metrics, collector uptime, RAM peak, and detection lead times."""
     with get_readonly_connection() as conn:
         # Collector uptime calculation
         uptime_row = conn.execute(
@@ -293,21 +304,80 @@ def get_metrics():
             """
         ).fetchone()
 
-        peak_ram_mb = stats_row["max_ram"] or 51
+        peak_ram_mb = stats_row["max_ram"] or 0
         total_scanned = stats_row["total_scanned"] or 0
         total_flagged = stats_row["total_flagged"] or 0
 
-        # Average lead time (hours between detection and blacklist, default 31h baseline)
+        # Real lead time calculation from domain_findings
+        lead_rows = conn.execute(
+            """
+            SELECT first_seen, blacklist_listed_at
+            FROM domain_findings
+            WHERE blacklist_listed_at IS NOT NULL AND first_seen IS NOT NULL
+            """
+        ).fetchall()
+
+        avg_lead_time_hours: float | None = None
+        lead_time_note: str | None = None
+
+        if lead_rows:
+            diffs = []
+            for r in lead_rows:
+                try:
+                    t_det = datetime.fromisoformat(r["first_seen"].replace("Z", "+00:00"))
+                    t_bl = datetime.fromisoformat(r["blacklist_listed_at"].replace("Z", "+00:00"))
+                    diff_h = (t_bl - t_det).total_seconds() / 3600.0
+                    if diff_h >= 0:
+                        diffs.append(diff_h)
+                except Exception:
+                    pass
+            if diffs:
+                avg_lead_time_hours = round(sum(diffs) / len(diffs), 1)
+
+        if avg_lead_time_hours is None:
+            lead_time_note = "belum cukup data (belum ada temuan yang terdaftar di feed publik setelah deteksi)"
+
+        # Read dynamic metrics from data/eval_results.json
+        eval_file = get_eval_results_path()
+        metrics_available = False
+        precision_pct: float | None = None
+        recall_pct: float | None = None
+        f1_score: float | None = None
+        eval_timestamp: str | None = None
+        calibration_status = "uncalibrated"
+
+        if eval_file.exists():
+            try:
+                import json
+                with open(eval_file, "r", encoding="utf-8") as f:
+                    eval_data = json.load(f)
+                summary = eval_data.get("summary", {})
+                raw_metrics = summary.get("metrics", {})
+                eval_timestamp = summary.get("timestamp")
+
+                if "precision" in raw_metrics and "recall" in raw_metrics:
+                    precision_pct = round(raw_metrics["precision"] * 100.0, 2)
+                    recall_pct = round(raw_metrics["recall"] * 100.0, 2)
+                    f1_score = round(raw_metrics.get("f1_score", 0.0), 4)
+                    metrics_available = True
+                    date_part = eval_timestamp[:10] if eval_timestamp else "unknown"
+                    calibration_status = f"calibrated ({date_part})"
+            except Exception as e:
+                logger.warning("Failed to parse eval_results.json: %s", e)
+
         return {
-            "precision_pct": 100.0,
-            "recall_pct": 91.8,
-            "f1_score": 0.957,
+            "metrics_available": metrics_available,
+            "precision_pct": precision_pct,
+            "recall_pct": recall_pct,
+            "f1_score": f1_score,
+            "eval_timestamp": eval_timestamp,
             "collector_uptime_pct": collector_uptime_pct,
             "peak_ram_mb": peak_ram_mb,
-            "avg_lead_time_hours": 31.0,
+            "avg_lead_time_hours": avg_lead_time_hours,
+            "lead_time_note": lead_time_note,
             "total_domains_scanned": total_scanned,
             "total_findings_flagged": total_flagged,
-            "calibration_status": "calibrated_t21",
+            "calibration_status": calibration_status,
         }
 
 
