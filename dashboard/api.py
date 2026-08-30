@@ -23,6 +23,8 @@ from zoneinfo import ZoneInfo
 
 from fastapi import Depends, FastAPI, HTTPException, Query, Request, Response, status
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import FileResponse
+from fastapi.staticfiles import StaticFiles
 import uvicorn
 
 # Ensure repository root is on sys.path
@@ -39,6 +41,7 @@ logging.basicConfig(
 logger = logging.getLogger("siaga.dashboard.api")
 
 DEFAULT_DB_PATH = BASE_DIR / "data" / "siaga.db"
+STATIC_DIR = BASE_DIR / "dashboard" / "static"
 WIB = ZoneInfo("Asia/Jakarta")
 
 app = FastAPI(
@@ -49,6 +52,10 @@ app = FastAPI(
     redoc_url=None,
 )
 
+# Mount static directory for frontend assets
+if STATIC_DIR.exists():
+    app.mount("/static", StaticFiles(directory=str(STATIC_DIR)), name="static")
+
 # Restrict CORS to local development / dashboard origins
 app.add_middleware(
     CORSMiddleware,
@@ -57,6 +64,15 @@ app.add_middleware(
     allow_methods=["GET", "HEAD", "OPTIONS"],
     allow_headers=["*"],
 )
+
+
+@app.get("/", include_in_schema=False)
+def serve_dashboard_ui():
+    """Serve the static vanilla HTML dashboard."""
+    index_path = STATIC_DIR / "index.html"
+    if not index_path.exists():
+        raise HTTPException(status_code=404, detail="Dashboard UI not found")
+    return FileResponse(index_path)
 
 
 @app.middleware("http")

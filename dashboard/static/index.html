@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SIAGA — Sistem Deteksi & Pemantauan Penipuan Digital</title>
+  <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+  <div class="container">
+    <!-- Top Header -->
+    <header class="header">
+      <div class="header-left">
+        <div class="logo-group">
+          <span class="logo-shield">🛡️</span>
+          <h1 class="title">SIAGA</h1>
+          <span class="badge badge-sub">AI HackFest 2026</span>
+        </div>
+        <p class="subtitle">Pemantauan Harian &amp; Deteksi Dini Penipuan Digital</p>
+      </div>
+      <div class="header-right">
+        <div id="healthBadge" class="badge badge-health">
+          <span class="status-dot">●</span> <span id="healthText">MEMERIKSA...</span>
+        </div>
+        <div class="date-badge" id="currentDateBadge">-- --- ----</div>
+        <button id="refreshBtn" class="btn btn-refresh" title="Muat ulang data">🔄 Refresh</button>
+      </div>
+    </header>
+
+    <!-- Stat Funnel Cards (Big Numbers) -->
+    <section class="funnel-section">
+      <div class="card stat-card">
+        <div class="stat-label">DOMAINS SCANNED</div>
+        <div class="stat-number" id="scannedCount">0</div>
+        <div class="stat-sub">Semua domain mentah (CT Log 24j)</div>
+      </div>
+      
+      <div class="funnel-arrow">➔</div>
+
+      <div class="card stat-card">
+        <div class="stat-label">LOLOS TAHAP 1 (BRAND)</div>
+        <div class="stat-number stat-amber" id="tahap1Count">0</div>
+        <div class="stat-sub" id="tahap1Ratio">0.0% dari total pindaian</div>
+      </div>
+
+      <div class="funnel-arrow">➔</div>
+
+      <div class="card stat-card">
+        <div class="stat-label">DITANDAI (RISK &ge; 40)</div>
+        <div class="stat-number stat-danger" id="flaggedCount">0</div>
+        <div class="stat-sub">Indikasi ancaman phishing</div>
+      </div>
+
+      <div class="funnel-arrow">➔</div>
+
+      <div class="card stat-card">
+        <div class="stat-label">AKTIF / LIVE</div>
+        <div class="stat-number stat-cyan" id="liveCount">0</div>
+        <div class="stat-sub">Domain merespons HTTP live</div>
+      </div>
+    </section>
+
+    <!-- Main Grid: Charts & Top Findings -->
+    <div class="main-grid">
+      <!-- Left Column: Trend & Funnel SVG Charts -->
+      <section class="charts-column">
+        <div class="card chart-card">
+          <div class="card-header">
+            <h3>📈 Tren Pemindaian &amp; Temuan 14 Hari</h3>
+            <span class="card-tag">Inline SVG · Zero CDN</span>
+          </div>
+          <div class="chart-container" id="trendChartContainer">
+            <svg id="trendSvg" viewBox="0 0 500 160" preserveAspectRatio="none"></svg>
+          </div>
+          <div class="chart-legend">
+            <span class="legend-item"><span class="legend-dot dot-scanned"></span> Dipindai</span>
+            <span class="legend-item"><span class="legend-dot dot-flagged"></span> Ditandai (Temuan)</span>
+          </div>
+        </div>
+
+        <div class="card chart-card">
+          <div class="card-header">
+            <h3>⚡ Rasio Penyaringan Bertingkat (Funnel Efficiency)</h3>
+            <span class="card-tag">Arsitektur Hemat Token</span>
+          </div>
+          <div id="funnelBarsContainer" class="funnel-bars-container">
+            <!-- Rendered dynamically by app.js -->
+          </div>
+        </div>
+      </section>
+
+      <!-- Right Column: Priority Findings -->
+      <section class="findings-column">
+        <div class="card findings-card">
+          <div class="card-header findings-header">
+            <div>
+              <h3>🚨 Temuan Domain Prioritas Hari Ini</h3>
+              <p class="findings-sub">Daftar domain indikasi penipuan dengan skor risiko tertinggi</p>
+            </div>
+            <div class="unmask-toggle-wrapper" title="Sesuai UU PDP &amp; Plan 06, domain disamarkan secara default untuk melindungi nama baik">
+              <label class="switch">
+                <input type="checkbox" id="unmaskToggle">
+                <span class="slider round"></span>
+              </label>
+              <span class="toggle-label" id="toggleLabel">Penyamaran: AKTIF</span>
+            </div>
+          </div>
+
+          <div class="table-responsive">
+            <table class="findings-table">
+              <thead>
+                <tr>
+                  <th>Domain</th>
+                  <th>Institusi Dicatut</th>
+                  <th>Skor Risiko</th>
+                  <th>Status</th>
+                  <th>Metode</th>
+                </tr>
+              </thead>
+              <tbody id="findingsTableBody">
+                <tr>
+                  <td colspan="5" class="text-center text-muted">Memuat temuan prioritas...</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+    </div>
+
+    <!-- Bottom System & Validation Metrics Bar -->
+    <footer class="footer-metrics card">
+      <div class="metric-item">
+        <span class="m-label">MODEL PRECISION</span>
+        <span class="m-val stat-success" id="metricPrecision">--%</span>
+      </div>
+      <div class="metric-divider"></div>
+      <div class="metric-item">
+        <span class="m-label">MODEL RECALL</span>
+        <span class="m-val stat-cyan" id="metricRecall">--%</span>
+      </div>
+      <div class="metric-divider"></div>
+      <div class="metric-item">
+        <span class="m-label">F1 SCORE</span>
+        <span class="m-val" id="metricF1">--</span>
+      </div>
+      <div class="metric-divider"></div>
+      <div class="metric-item">
+        <span class="m-label">COLLECTOR UPTIME</span>
+        <span class="m-val" id="metricUptime">--%</span>
+      </div>
+      <div class="metric-divider"></div>
+      <div class="metric-item">
+        <span class="m-label">RAM PUNCAK</span>
+        <span class="m-val" id="metricRam">-- MB</span>
+      </div>
+      <div class="metric-divider"></div>
+      <div class="metric-item">
+        <span class="m-label">STATUS KALIBRASI</span>
+        <span class="m-val badge-calib" id="metricCalib">--</span>
+      </div>
+    </footer>
+  </div>
+
+  <script src="/static/app.js"></script>
+</body>
+</html>

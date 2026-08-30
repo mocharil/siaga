@@ -263,3 +263,27 @@ def test_mask_domain_helper():
     assert mask_domain("ruangguru.com") == "rua***ru.com"
     assert mask_domain("bankmandiri-secure-login.xyz") == "bank***gin.xyz"
     assert mask_domain("plain") == "plain"
+
+
+def test_serve_dashboard_ui_and_static_files(client):
+    """Verify that root endpoint serves index.html and /static serves css/js."""
+    r_index = client.get("/")
+    assert r_index.status_code == 200
+    assert "SIAGA" in r_index.text
+    assert "<title>" in r_index.text
+
+    r_css = client.get("/static/style.css")
+    assert r_css.status_code == 200
+    assert "--bg-main" in r_css.text
+
+    r_js = client.get("/static/app.js")
+    assert r_js.status_code == 200
+    assert "renderTrendSvg" in r_js.text
+
+
+def test_zero_external_cdn_dependencies():
+    """Verify that all dashboard assets are 100% local with zero external CDN/font/script links (D3)."""
+    static_path = Path(__file__).resolve().parent.parent / "dashboard" / "static"
+    for asset in static_path.glob("*"):
+        text = asset.read_text(encoding="utf-8")
+        assert "http://" not in text and "https://" not in text, f"Found external reference in {asset.name}"
