@@ -161,3 +161,57 @@ def test_healthcheck_cli_alert_dispatch(sample_db, monkeypatch):
         assert mock_send.called
         assert mock_send.call_args[1]["chat_id"] == "12345678"
         assert "[SIAGA HEALTH ALERT]" in mock_send.call_args[1]["text"]
+
+
+def test_healthcheck_daily_stats_staleness_wib_timezone(tmp_path):
+    """Verify that daily_stats staleness evaluates from 07:00 WIB (00:00 UTC), not 07:00 UTC.
+
+    Why this test is crucial (Lessons from T06 & T26 incident):
+    The daily brief cron is scheduled at 07:00 WIB (00:00 UTC). If healthcheck parses
+    the daily_stats date as 07:00 UTC (which is 14:00 WIB), the timestamp is falsely
+    shifted 7 hours into the future, stretching the 26-hour staleness threshold to 33 hours.
+    
+    This test verifies that at 27 hours after 07:00 WIB (i.e. next day 10:00 WIB),
+    the system correctly flags daily_stats as stale (> 26 hours), preventing silent
+    healthcheck delays.
+    """
+    from zoneinfo import ZoneInfo
+    db_file = tmp_path / "test_health_wib.db"
+    init_db(db_file)
+
+    WIB = ZoneInfo("Asia/Jakarta")
+    # Date in database: 2026-08-28 (completed 2026-08-28 07:00 WIB)
+    stat_date = "2026-08-28"
+
+    # Current time for test: 2026-08-29 10:00 WIB (27 hours after 2026-08-28 07:00 WIB)
+    now_27h_wib = datetime(2026, 8, 29, 10, 0, 0, tzinfo=WIB)
+    collector_run_time = (now_27h_wib - timedelta(hours=2)).isoformat()
+
+    with sqlite3.connect(str(db_file)) as conn:
+        conn.execute(
+            """
+            INSERT INTO collector_runs (started_at, finished_at, source, fetched, inserted_new, status)
+            VALUES (?, ?, 'ctlogs_id', 100, 10, 'ok')
+            """,
+            (collector_run_time, collector_run_time),
+        )
+        conn.execute(
+            """
+            INSERT INTO daily_stats (date, domains_scanned, domains_flagged, collector_ok, heartbeat_ok, peak_ram_mb)
+            VALUES (?, 100, 2, 1, 1, 45)
+            """,
+            (stat_date,),
+        )
+        conn.commit()
+
+    # 27 hours elapsed from 07:00 WIB must trigger stale alert (threshold = 26h)
+    result = check_health(db_path=db_file, max_staleness_hours=26.0, now=now_27h_wib)
+    assert result.is_healthy is False
+    assert any("daily_stats terakhir sudah usang" in issue for issue in result.issues)
+    assert any("27.0 jam" in issue for issue in result.issues)
+
+    # Conversely, at 25 hours after 07:00 WIB (next day 08:00 WIB), it must be healthy
+    now_25h_wib = datetime(2026, 8, 29, 8, 0, 0, tzinfo=WIB)
+    result_fresh = check_health(db_path=db_file, max_staleness_hours=26.0, now=now_25h_wib)
+    assert result_fresh.is_healthy is True
+    assert len(result_fresh.issues) == 0

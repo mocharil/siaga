@@ -22,6 +22,7 @@ from pathlib import Path
 import sqlite3
 import sys
 import time
+from zoneinfo import ZoneInfo
 
 # Ensure UTF-8 output on Windows
 if sys.platform == "win32":
@@ -49,6 +50,7 @@ logger = logging.getLogger("siaga.healthcheck")
 
 DEFAULT_DB_PATH = BASE_DIR / "data" / "siaga.db"
 DEFAULT_MAX_STALENESS_HOURS = 26.0
+WIB = ZoneInfo("Asia/Jakarta")
 
 
 @dataclass
@@ -220,9 +222,12 @@ def check_health(
 
             # Check if latest daily_stats date is stale (> 26 hours ago)
             try:
-                # Interpret daily stat as being completed by 07:00 UTC (14:00 WIB) of that date
-                stat_dt = datetime.strptime(stat_date, "%Y-%m-%d").replace(hour=7, minute=0, second=0, tzinfo=timezone.utc)
-                elapsed_hb_hours = (now_dt - stat_dt).total_seconds() / 3600.0
+                # Interpret daily stat as being completed by 07:00 WIB (00:00 UTC) of that date
+                stat_dt = datetime.strptime(stat_date, "%Y-%m-%d").replace(
+                    hour=7, minute=0, second=0, tzinfo=WIB
+                )
+                now_wib = now_dt.astimezone(WIB) if now_dt.tzinfo else now_dt.replace(tzinfo=timezone.utc).astimezone(WIB)
+                elapsed_hb_hours = (now_wib - stat_dt).total_seconds() / 3600.0
                 if elapsed_hb_hours > max_staleness_hours:
                     result.is_healthy = False
                     result.issues.append(
