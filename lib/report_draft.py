@@ -56,26 +56,35 @@ class ReportDraft:
 
 
 def get_recommended_channels(domain: str, brand: str) -> list[ReportingChannel]:
-    """Determine official escalation channels based on domain TLD and targeted brand."""
+    """Determine official escalation channels based on domain TLD and targeted brand.
+
+    Source Verifications:
+    - Kominfo AduanKonten: https://www.aduankonten.id/kontak-kami & https://aptika.kominfo.go.id/kontak/ (Aug 2026)
+    - PANDI Abuse Desk: https://pandi.id/blog/peran-pandi-dalam-penanganan-penyalahgunaan-nama-domain-id (Aug 2026)
+    - OJK 157 & Satgas PASTI: https://x.com/ojkindonesia/status/1704793665238077502 & https://kontak157.ojk.go.id (Aug 2026)
+    - BSSN Gov-CSIRT: https://www.bssn.go.id/aduan-siber/ & https://idsirtii.or.id/halaman/tentang/rfc-2350-gov-csirt-indonesia.html (Aug 2026)
+    """
     channels: list[ReportingChannel] = [
+        # Verified via https://www.aduankonten.id/kontak-kami (Aug 2026)
         ReportingChannel(
             name="Aduan Konten Kominfo RI",
-            target_type="Regulator Konten Negatif",
+            target_type="Regulator Konten Negatif & Pemblokiran",
             contact="aduankonten@kominfo.go.id | WA: 08119224545",
-            submission_method="Email / Web Portal (https://aduan.kominfo.go.id)",
-            notes="Kanal resmi pemerintah untuk pemblokiran akses internet & DNS trust positif.",
+            submission_method="Portal Resmi (https://www.aduankonten.id) / Email (aduankonten@kominfo.go.id)",
+            notes="Kanal resmi pemerintah untuk pemblokiran akses internet & normalisasi DNS trust positif.",
         )
     ]
 
     clean_dom = domain.lower().strip()
     # Check if .id domain
+    # Verified via https://pandi.id/blog/peran-pandi-dalam-penanganan-penyalahgunaan-nama-domain-id (Aug 2026)
     if clean_dom.endswith(".id"):
         channels.append(
             ReportingChannel(
                 name="PANDI (Pengelola Nama Domain Internet Indonesia)",
                 target_type="Registry .ID",
-                contact="abuse@pandi.id | helpdesk@pandi.id",
-                submission_method="Email Abuse Desk PANDI",
+                contact="abuse@pandi.id | helpdesk@pandi.id | Telp: (021) 80862000",
+                submission_method="Email Abuse Desk (abuse@pandi.id) / Portal https://pandi.id",
                 notes="Permohonan penangguhan (suspend) nama domain .id yang terindikasi phishing.",
             )
         )
@@ -83,22 +92,24 @@ def get_recommended_channels(domain: str, brand: str) -> list[ReportingChannel]:
     # If banking or financial institution
     brand_lower = brand.lower() if brand else ""
     if any(k in brand_lower for k in ("bank", "bca", "bni", "bri", "mandiri", "dana", "ovo", "gopay", "ojk", "bi")):
+        # Verified via https://x.com/ojkindonesia/status/1704793665238077502 (Aug 2026)
         channels.append(
             ReportingChannel(
                 name="Kontak OJK 157 & Satgas PASTI",
-                target_type="Otoritas Jasa Keuangan",
-                contact="konsumen@ojk.go.id | Telp: 157 | WA: 081157157157",
-                submission_method="Portal Konsumen OJK / Email Pengaduan",
-                notes="Eskalasi perlindungan konsumen sektor jasa keuangan.",
+                target_type="Otoritas Jasa Keuangan & Satgas Pemberantasan Aktivitas Keuangan Ilegal",
+                contact="konsumen@ojk.go.id | satgaspasti@ojk.go.id | Telp: 157 | WA: 081157157157",
+                submission_method="Email Pengaduan (konsumen@ojk.go.id / satgaspasti@ojk.go.id) / Portal https://kontak157.ojk.go.id",
+                notes="Eskalasi perlindungan konsumen dan penindakan entitas keuangan/investasi ilegal.",
             )
         )
+        # Verified via https://www.bssn.go.id/aduan-siber/ & RFC 2350 Gov-CSIRT Indonesia (Aug 2026)
         channels.append(
             ReportingChannel(
-                name="Direktorat Keamanan Siber BSSN (CSIRT Nasional)",
-                target_type="Pusat Operasi Keamanan Siber",
-                contact="bantuan74@bssn.go.id",
-                submission_method="Email CSIRT BSSN",
-                notes="Koordinasi insiden siber sektor perbankan dan infrastruktur kritis.",
+                name="Direktorat Operasi Keamanan Siber BSSN (Gov-CSIRT / CSIRT Nasional)",
+                target_type="Pusat Operasi Keamanan Siber Nasional",
+                contact="bantuan70@bssn.go.id | Telp: (021) 78833610 | WA: 0812-8135-4598 (24/7)",
+                submission_method="Email CSIRT BSSN (bantuan70@bssn.go.id) / Hotline Insiden Siber",
+                notes="Koordinasi penanganan insiden siber sektor perbankan dan infrastruktur informasi vital.",
             )
         )
 
