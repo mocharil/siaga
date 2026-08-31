@@ -26,15 +26,15 @@ import logging
 from pathlib import Path
 import sqlite3
 
+from lib.domain_utils import registrable_domain as _registrable_domain
+
 logger = logging.getLogger("siaga.campaign")
 
 DEFAULT_DB_PATH = Path(__file__).resolve().parent.parent / "data" / "siaga.db"
 
-# Indonesian second-level TLDs where the registrable unit is three labels
-# (e.g. "provider.co.id", not "co.id"). Mirrors collector/ct_collector.py's
-# CTLOGS_ID_TLDS — kept as a separate literal here since this module has no
-# reason to depend on the collector.
-ID_SECOND_LEVEL_TLDS = {"co.id", "go.id", "ac.id", "or.id", "web.id"}
+# _registrable_domain is now imported from lib.domain_utils (shared authoritative source).
+# lib/rdap.py also imports from there — this ensures both modules always use
+# identical extraction logic without a circular import.
 
 MIN_NAMESERVER_CLUSTER_SIZE = 2
 MIN_BRAND_PATTERN_CLUSTER_SIZE = 3
@@ -48,26 +48,6 @@ class CampaignClusteringSummary:
     brand_pattern_clusters_found: int = 0
     brand_pattern_domains_labeled: int = 0
 
-
-def _registrable_domain(hostname: str) -> str | None:
-    """Extract the registrable (parent) domain from a nameserver hostname.
-
-    "ns1.badhost.xyz" -> "badhost.xyz". "ns1.provider.co.id" -> "provider.co.id"
-    (using the known .id second-level TLD list). Generic TLDs beyond a plain
-    two-label suffix (e.g. "co.uk") are not handled — acceptable here because
-    nameserver providers overwhelmingly sit on generic TLDs (.com, .net) or
-    the .id family this project targets, not on other countries' compound
-    suffixes.
-    """
-    host = hostname.strip().lower().rstrip(".")
-    labels = host.split(".")
-    if len(labels) < 2:
-        return None
-
-    last_two = ".".join(labels[-2:])
-    if last_two in ID_SECOND_LEVEL_TLDS and len(labels) >= 3:
-        return ".".join(labels[-3:])
-    return last_two
 
 
 def nameserver_signature(nameservers_field: str | None) -> str | None:

@@ -23,9 +23,14 @@ def test_db(tmp_path):
     db_file = tmp_path / "test_api.db"
     init_db(db_file)
 
+    from datetime import timedelta
+    from zoneinfo import ZoneInfo
+
+    WIB = ZoneInfo("Asia/Jakarta")
+    now_dt = datetime.now(WIB)
+    today_str = now_dt.strftime("%Y-%m-%d")
+    yesterday_str = (now_dt - timedelta(days=1)).strftime("%Y-%m-%d")
     now_iso = datetime.now(timezone.utc).isoformat()
-    today_str = "2026-08-30"
-    yesterday_str = "2026-08-29"
 
     with sqlite3.connect(str(db_file)) as conn:
         # Collector run
@@ -74,11 +79,15 @@ def client(test_db):
 
 def test_stats_today_endpoint(client):
     """Verify /api/stats/today returns the latest daily summary metrics."""
+    from datetime import datetime, timezone
+    from zoneinfo import ZoneInfo
+    today_str = datetime.now(ZoneInfo("Asia/Jakarta")).strftime("%Y-%m-%d")
+
     res = client.get("/api/stats/today")
     assert res.status_code == 200
     data = res.json()
 
-    assert data["date"] == "2026-08-30"
+    assert data["date"] == today_str
     assert data["domains_scanned"] == 9100
     assert data["tahap1_passed"] == 310
     assert data["domains_flagged"] == 8
@@ -90,6 +99,12 @@ def test_stats_today_endpoint(client):
 
 def test_stats_trend_endpoint(client):
     """Verify /api/stats/trend returns chronological daily series."""
+    from datetime import datetime, timedelta, timezone
+    from zoneinfo import ZoneInfo
+    now_wib = datetime.now(ZoneInfo("Asia/Jakarta"))
+    today_str = now_wib.strftime("%Y-%m-%d")
+    yesterday_str = (now_wib - timedelta(days=1)).strftime("%Y-%m-%d")
+
     res = client.get("/api/stats/trend?days=14")
     assert res.status_code == 200
     data = res.json()
@@ -99,8 +114,8 @@ def test_stats_trend_endpoint(client):
     trend = data["trend"]
     assert len(trend) == 2
     # Chronological check: yesterday first, then today
-    assert trend[0]["date"] == "2026-08-29"
-    assert trend[1]["date"] == "2026-08-30"
+    assert trend[0]["date"] == yesterday_str
+    assert trend[1]["date"] == today_str
 
 
 def test_findings_top_endpoint_privacy_masked(client):

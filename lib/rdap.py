@@ -18,6 +18,8 @@ import time
 import urllib.error
 import urllib.request
 
+from lib.domain_utils import registrable_domain as _registrable_domain
+
 logger = logging.getLogger("siaga.rdap")
 
 DEFAULT_DB_PATH = Path(__file__).resolve().parent.parent / "data" / "siaga.db"
@@ -251,7 +253,10 @@ def lookup(
     """Perform RDAP lookup for a domain with caching, bootstrap routing, and error resilience.
 
     Args:
-        domain: Fully-qualified domain name to query (e.g. "google.com", "pandi.id").
+        domain: Any domain or subdomain (e.g. "google.com", "login.fraud.namabank.web.id").
+                The registrable domain is extracted automatically before querying RDAP —
+                RDAP registries only hold records for the registered apex domain, not
+                arbitrary subdomains above it.
         db_path: Optional path to SQLite database for caching. Defaults to data/siaga.db.
         allow_network: Whether to allow network requests on cache miss.
         timeout: HTTP request timeout in seconds (default: 5.0).
@@ -260,9 +265,22 @@ def lookup(
         DomainInfo if domain registration metadata was found, or None if domain was
         not found (404), query timed out, or rate-limited.
     """
-    clean_domain = domain.strip().lower().rstrip(".")
-    if not clean_domain or "." not in clean_domain:
+    clean_input = domain.strip().lower().rstrip(".")
+    if not clean_input or "." not in clean_input:
         return None
+
+    # --- KEY FIX: extract registrable domain before any cache lookup or network
+    # call.  RDAP registries only hold records for the registered apex domain
+    # (e.g. "bumiayuvpn.web.id"), not for arbitrary subdomains placed above it
+    # (e.g. "investors.spotify.com.id2.bumiayuvpn.web.id").  Without this step,
+    # every distinct subdomain would hit a 404, poison the negative cache with
+    # its own entry, and silently return None for all RDAP-enriched fields.
+    reg_domain = _registrable_domain(clean_input)
+    if not reg_domain:
+        logger.debug("Could not extract registrable domain from '%s'; skipping RDAP.", clean_input)
+        return None
+    # Work with the registrable domain for all subsequent cache and network ops.
+    clean_domain = reg_domain
 
     resolved_db_path = Path(db_path) if db_path else DEFAULT_DB_PATH
     now_dt = datetime.now(timezone.utc)
