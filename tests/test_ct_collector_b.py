@@ -21,6 +21,9 @@ from collector.ct_collector_b import (
     CANDIDATE_MODIFIERS,
     CANDIDATE_TLDS,
     MIN_STEM_LEN,
+    RATE_LIMIT_ABORT_THRESHOLD,
+    RATE_LIMIT_MAX_RETRIES,
+    RateLimited,
     _check_domain,
     check_candidates,
     generate_candidates,
@@ -133,6 +136,18 @@ class TestCheckDomain:
             with pytest.raises(RuntimeError):
                 _check_domain("bankmandiri.xyz", None)
 
+    def test_http_429_raises_rate_limited_not_runtime_error(self):
+        """Regression: the 2026-09-02 run treated 429 as an unhandled HTTPError
+        and crashed the entire batch after ~40s, checking 0 of 2688 candidates.
+        429 must be its own exception type so check_candidates can back off
+        instead of the whole run dying."""
+        err = urllib.error.HTTPError(
+            url="x", code=429, msg="Too Many Requests", hdrs=None, fp=None
+        )
+        with patch("urllib.request.urlopen", side_effect=err):
+            with pytest.raises(RateLimited):
+                _check_domain("bankmandiri.xyz", None)
+
 
 # ---------------------------------------------------------------------------
 # check_candidates
@@ -170,6 +185,50 @@ class TestCheckCandidates:
         assert matches == []
         assert checked == 2
         assert errors == 0
+
+    def test_rate_limit_retries_then_succeeds(self):
+        """429 twice, then success on the final allowed attempt -- must not
+        be counted as an error once it eventually succeeds."""
+        calls = {"n": 0}
+
+        def flaky(hostname, api_key):
+            calls["n"] += 1
+            if calls["n"] <= RATE_LIMIT_MAX_RETRIES:
+                raise RateLimited("429")
+            return True, "2026-01-01T00:00:00Z"
+
+        with patch("collector.ct_collector_b._check_domain", side_effect=flaky), \
+             patch("time.sleep"):
+            matches, checked, errors = check_candidates(["retry-me.xyz"])
+
+        assert matches == [("retry-me.xyz", "2026-01-01T00:00:00Z")]
+        assert checked == 1
+        assert errors == 0
+
+    def test_rate_limit_exhausted_counts_as_error_not_crash(self):
+        """429 on every attempt for one candidate -- must count as an error
+        and move on, never raise out of check_candidates."""
+        with patch(
+            "collector.ct_collector_b._check_domain",
+            side_effect=RateLimited("429"),
+        ), patch("time.sleep"):
+            matches, checked, errors = check_candidates(["always-429.xyz"])
+        assert matches == []
+        assert errors == 1
+
+    def test_rate_limit_aborts_run_after_consecutive_threshold(self):
+        """The real 2026-09-02 failure mode: server keeps saying 429. The
+        collector must stop early instead of grinding through every
+        remaining candidate for a guaranteed failure."""
+        candidates = [f"c{i}.xyz" for i in range(RATE_LIMIT_ABORT_THRESHOLD + 10)]
+        with patch(
+            "collector.ct_collector_b._check_domain",
+            side_effect=RateLimited("429"),
+        ), patch("time.sleep"):
+            matches, checked, errors = check_candidates(candidates)
+        assert checked == 0
+        assert errors == RATE_LIMIT_ABORT_THRESHOLD
+        assert matches == []
 
 
 # ---------------------------------------------------------------------------
