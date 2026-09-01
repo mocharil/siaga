@@ -118,8 +118,6 @@ def get_db_path() -> Path:
     return DEFAULT_DB_PATH
 
 
-from lib.db import init_db
-
 SNAPSHOT_PATH = BASE_DIR / "data" / "siaga_snapshot.json"
 
 
@@ -128,27 +126,19 @@ def load_in_memory_from_snapshot(snapshot_path: Path) -> sqlite3.Connection:
     import json
     mem_conn = sqlite3.connect(":memory:")
     mem_conn.row_factory = sqlite3.Row
-    init_db(mem_conn)
+
     with open(snapshot_path, "r", encoding="utf-8") as f:
         data = json.load(f)
 
-    for r in data.get("daily_stats", []):
-        keys = list(r.keys())
-        placeholders = ", ".join(["?"] * len(keys))
-        cols = ", ".join(keys)
-        mem_conn.execute(f"INSERT OR REPLACE INTO daily_stats ({cols}) VALUES ({placeholders})", list(r.values()))
-
-    for r in data.get("domain_findings", []):
-        keys = list(r.keys())
-        placeholders = ", ".join(["?"] * len(keys))
-        cols = ", ".join(keys)
-        mem_conn.execute(f"INSERT OR REPLACE INTO domain_findings ({cols}) VALUES ({placeholders})", list(r.values()))
-
-    for r in data.get("collector_runs", []):
-        keys = list(r.keys())
-        placeholders = ", ".join(["?"] * len(keys))
-        cols = ", ".join(keys)
-        mem_conn.execute(f"INSERT OR REPLACE INTO collector_runs ({cols}) VALUES ({placeholders})", list(r.values()))
+    for tbl in ["daily_stats", "domain_findings", "collector_runs"]:
+        rows = data.get(tbl, [])
+        if rows:
+            cols = list(rows[0].keys())
+            cols_def = ", ".join([f'"{c}"' for c in cols])
+            placeholders = ", ".join(["?"] * len(cols))
+            mem_conn.execute(f'CREATE TABLE IF NOT EXISTS "{tbl}" ({cols_def})')
+            for r in rows:
+                mem_conn.execute(f'INSERT INTO "{tbl}" VALUES ({placeholders})', list(r.values()))
 
     mem_conn.commit()
     return mem_conn
@@ -171,6 +161,7 @@ def get_readonly_connection(db_path: Path | None = None) -> Generator[sqlite3.Co
             detail=f"Database file not found at {target_path}",
         )
 
+    db_uri = f"file:{target_path.as_posix()}?mode=ro"
     conn = None
     try:
         conn = sqlite3.connect(db_uri, uri=True, timeout=5.0)
@@ -178,20 +169,16 @@ def get_readonly_connection(db_path: Path | None = None) -> Generator[sqlite3.Co
         yield conn
     except Exception as e:
         if SNAPSHOT_PATH.exists():
+            mem_conn = load_in_memory_from_snapshot(SNAPSHOT_PATH)
             try:
-                mem_conn = load_in_memory_from_snapshot(SNAPSHOT_PATH)
                 yield mem_conn
-                return
-            except Exception as mem_err:
-                logger.error("Failed to load in-memory snapshot: %s", mem_err)
-                raise HTTPException(
-                    status_code=500,
-                    detail=f"Mem snapshot error: {mem_err} (orig: {e})",
-                )
+            finally:
+                mem_conn.close()
+            return
         logger.error("Read-only database connection error: %s", e)
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-            detail=f"Database connection error: {e}, snapshot_exists: {SNAPSHOT_PATH.exists()}, snapshot_path: {SNAPSHOT_PATH}",
+            detail=f"Database connection error: {e}",
         )
     finally:
         if conn is not None:
