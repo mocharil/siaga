@@ -59,9 +59,18 @@ from lib.similarity import load_watchlist  # noqa: E402
 # ---------------------------------------------------------------------------
 
 CTLOGS_BASE_URL = "https://api.ctlogs.dev"
-REQUEST_DELAY_SECONDS = 1.0
+REQUEST_DELAY_SECONDS = 2.0
 REQUEST_TIMEOUT_SECONDS = 15
 MIN_STEM_LEN = 4  # selaras dengan SHORT_NAME_MAX_LEN di lib/similarity.py
+
+# Anonymous tier ctlogs.dev ternyata membatasi jauh lebih ketat daripada
+# "1 concurrent" yang didokumentasikan -- run nyata 2026-09-02 kena 429
+# dalam <1 menit walau dijeda 1 req/detik. Backoff + retry per kandidat,
+# dan hentikan seluruh run kalau server terus menolak (bukan menggerus
+# ribuan kandidat yang pasti gagal semua).
+RATE_LIMIT_BACKOFF_SECONDS = 30.0
+RATE_LIMIT_MAX_RETRIES = 2
+RATE_LIMIT_ABORT_THRESHOLD = 5  # 429 beruntun -> hentikan run, jangan dipaksa
 
 CANDIDATE_TLDS = ["xyz", "top"]
 
@@ -108,6 +117,11 @@ def generate_candidates(watchlist_path: Path | str | None = None) -> list[str]:
 # ---------------------------------------------------------------------------
 
 
+class RateLimited(Exception):
+    """Raised when ctlogs.dev returns 429 -- distinct from other failures so
+    the caller can back off and retry instead of counting it as a dead end."""
+
+
 def _check_domain(hostname: str, api_key: str | None) -> tuple[bool, str | None]:
     """Query /v1/domain/{hostname}. Returns (has_cert, earliest_not_before_iso)."""
     import json
@@ -127,7 +141,9 @@ def _check_domain(hostname: str, api_key: str | None) -> tuple[bool, str | None]
         if e.code == 400:
             logger.debug("Invalid hostname skipped: %s", hostname)
             return False, None
-        raise
+        if e.code == 429:
+            raise RateLimited(f"429 checking {hostname}") from e
+        raise RuntimeError(f"HTTP {e.code} checking {hostname}: {e}") from e
     except (urllib.error.URLError, TimeoutError) as e:
         raise RuntimeError(f"Network error checking {hostname}: {e}") from e
 
@@ -146,20 +162,53 @@ def check_candidates(
 
     Returns (matches, checked_count, error_count) where matches is a list
     of (hostname, not_before_iso) for candidates that DO have a cert on record.
+
+    A 429 gets RATE_LIMIT_MAX_RETRIES retries with a fixed cooldown before
+    the candidate is counted as an error. If RATE_LIMIT_ABORT_THRESHOLD
+    consecutive candidates end up rate-limited even after retries, the run
+    stops early -- the server is telling us no, and grinding through the
+    remaining candidates would just produce more failures without result.
     """
     matches: list[tuple[str, str]] = []
     checked = 0
     errors = 0
+    consecutive_rate_limited = 0
 
     for hostname in candidates:
-        try:
-            has_cert, not_before = _check_domain(hostname, api_key)
-            checked += 1
-            if has_cert and not_before:
-                matches.append((hostname, not_before))
-        except RuntimeError as e:
-            errors += 1
-            logger.warning("Check failed for %s: %s", hostname, e)
+        for attempt in range(RATE_LIMIT_MAX_RETRIES + 1):
+            try:
+                has_cert, not_before = _check_domain(hostname, api_key)
+                checked += 1
+                if has_cert and not_before:
+                    matches.append((hostname, not_before))
+                consecutive_rate_limited = 0
+                break
+            except RateLimited:
+                if attempt < RATE_LIMIT_MAX_RETRIES:
+                    logger.warning(
+                        "Rate limited on %s, backing off %.0fs (attempt %d/%d)",
+                        hostname, RATE_LIMIT_BACKOFF_SECONDS, attempt + 1,
+                        RATE_LIMIT_MAX_RETRIES,
+                    )
+                    time.sleep(RATE_LIMIT_BACKOFF_SECONDS)
+                    continue
+                errors += 1
+                consecutive_rate_limited += 1
+                logger.warning("Still rate limited on %s after retries; giving up on it.", hostname)
+            except RuntimeError as e:
+                errors += 1
+                consecutive_rate_limited = 0
+                logger.warning("Check failed for %s: %s", hostname, e)
+            break
+
+        if consecutive_rate_limited >= RATE_LIMIT_ABORT_THRESHOLD:
+            logger.error(
+                "%d consecutive rate-limited candidates even with backoff; "
+                "aborting run early instead of grinding through the rest.",
+                consecutive_rate_limited,
+            )
+            break
+
         time.sleep(REQUEST_DELAY_SECONDS)
 
     return matches, checked, errors
