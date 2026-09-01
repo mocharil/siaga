@@ -1,3 +1,5 @@
 python-dotenv
 jsonschema
 psutil
+fastapi
+uvicorn
