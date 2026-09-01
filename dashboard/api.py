@@ -243,6 +243,7 @@ def get_stats_today():
 @app.get("/stats/trend", include_in_schema=False)
 def get_stats_trend(days: int = Query(default=14, ge=1, le=90, description="Number of past days to include")):
     """Returns chronological historical daily stats for trend visualization."""
+    days_val = int(getattr(days, "default", days))
     with get_readonly_connection() as conn:
         rows = conn.execute(
             """
@@ -252,7 +253,7 @@ def get_stats_trend(days: int = Query(default=14, ge=1, le=90, description="Numb
             ORDER BY date DESC
             LIMIT ?
             """,
-            (days,),
+            (days_val,),
         ).fetchall()
 
         # Reverse to chronological order (oldest to newest)
@@ -270,7 +271,7 @@ def get_stats_trend(days: int = Query(default=14, ge=1, le=90, description="Numb
         ]
 
         return {
-            "days_requested": days,
+            "days_requested": days_val,
             "total_records": len(trend_data),
             "trend": trend_data,
         }
@@ -283,6 +284,8 @@ def get_findings_top(
     unmask: bool = Query(default=False, description="Set True only if unmasked domain is explicitly requested"),
 ):
     """Returns highest risk domain findings with privacy masking applied by default."""
+    limit_val = int(getattr(limit, "default", limit))
+    unmask_val = bool(getattr(unmask, "default", unmask))
     with get_readonly_connection() as conn:
         rows = conn.execute(
             """
@@ -294,7 +297,7 @@ def get_findings_top(
             ORDER BY risk_score DESC, id DESC
             LIMIT ?
             """,
-            (limit,),
+            (limit_val,),
         ).fetchall()
 
         findings = []
@@ -302,9 +305,9 @@ def get_findings_top(
             raw_domain = r["domain"]
             findings.append({
                 "id": r["id"],
-                "domain": raw_domain if unmask else mask_domain(raw_domain),
+                "domain": raw_domain if unmask_val else mask_domain(raw_domain),
                 "domain_masked": mask_domain(raw_domain),
-                "raw_domain": raw_domain if unmask else None,
+                "raw_domain": raw_domain if unmask_val else None,
                 "first_seen": r["first_seen"],
                 "registered_at": r["registered_at"],
                 "registrar": r["registrar"],
@@ -322,7 +325,7 @@ def get_findings_top(
 
         return {
             "total_findings": total_findings,
-            "limit": limit,
+            "limit": limit_val,
             "findings": findings,
         }
 
