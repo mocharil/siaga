@@ -52,7 +52,7 @@ function updateClock() {
 // ==============================================================================
 async function loadStatsToday() {
   try {
-    const res = await fetch("/api/stats/today");
+    const res = await fetch("/stats/today");
     if (!res.ok) throw new Error(`Status ${res.status}`);
     const data = await res.json();
 
@@ -133,7 +133,7 @@ function renderFunnelBars(stats) {
 // ==============================================================================
 async function loadStatsTrend() {
   try {
-    const res = await fetch("/api/stats/trend?days=14");
+    const res = await fetch("/stats/trend?days=14");
     if (!res.ok) throw new Error(`Status ${res.status}`);
     const data = await res.json();
     renderTrendSvg(data.trend || []);
@@ -246,7 +246,7 @@ async function loadFindingsBrands() {
   if (!container) return;
 
   try {
-    const res = await fetch("/api/findings/brands");
+    const res = await fetch("/findings/brands");
     if (!res.ok) throw new Error(`Status ${res.status}`);
     const data = await res.json();
 
@@ -279,7 +279,7 @@ async function loadFindingsTop() {
   if (!tbody) return;
 
   try {
-    const res = await fetch("/api/findings/top?limit=100&unmask=true");
+    const res = await fetch("/findings/top?limit=100&unmask=true");
     if (!res.ok) throw new Error(`Status ${res.status}`);
     const data = await res.json();
     allFindings = data.findings || [];
@@ -347,7 +347,7 @@ async function openFindingModal(findingId) {
   if (!modal) return;
 
   try {
-    const res = await fetch(`/api/findings/${findingId}`);
+    const res = await fetch(`/findings/${findingId}`);
     if (!res.ok) throw new Error(`Status ${res.status}`);
     const data = await res.json();
 
@@ -431,7 +431,7 @@ async function runSandboxAnalysis() {
   if (btn) btn.innerHTML = `<span class="loading-spinner" style="width:14px;height:14px;display:inline-block;margin:0 6px 0 0;vertical-align:middle;"></span> Menganalisis...`;
 
   try {
-    const res = await fetch("/api/analyze", {
+    const res = await fetch("/analyze", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ text }),
@@ -500,8 +500,8 @@ async function runSandboxAnalysis() {
 async function loadMetricsAndHealth() {
   try {
     const [mRes, hRes] = await Promise.all([
-      fetch("/api/metrics"),
-      fetch("/api/health")
+      fetch("/metrics"),
+      fetch("/health")
     ]);
 
     if (mRes.ok) {
