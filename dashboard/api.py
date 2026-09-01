@@ -81,7 +81,10 @@ def serve_dashboard_ui():
 
 @app.middleware("http")
 async def enforce_readonly_methods(request: Request, call_next):
-    """Enforce strict read-only HTTP method policy (Reject POST/PUT/PATCH/DELETE with 405)."""
+    """Enforce strict read-only HTTP method policy, except for the interactive triage sandbox."""
+    # Allow POST only on /analyze endpoint (Mode A Sandbox - no DB writes, pure in-memory scoring)
+    if request.method == "POST" and request.url.path in ("/analyze", "/api/analyze"):
+        return await call_next(request)
     if request.method not in ("GET", "HEAD", "OPTIONS"):
         return Response(
             content=b'{"detail":"Method Not Allowed. SIAGA Dashboard API is strictly read-only."}',
