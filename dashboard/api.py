@@ -32,7 +32,11 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 if str(BASE_DIR) not in sys.path:
     sys.path.insert(0, str(BASE_DIR))
 
+from pydantic import BaseModel
+
 from scripts.healthcheck import check_health
+from lib.scoring import analyze_message
+from lib.report_draft import generate_report_draft
 
 logging.basicConfig(
     level=logging.INFO,
@@ -328,6 +332,130 @@ def get_findings_top(
             "limit": limit_val,
             "findings": findings,
         }
+
+
+@app.get("/api/findings/brands", summary="Fetch top targeted brands breakdown")
+@app.get("/findings/brands", include_in_schema=False)
+def get_findings_brands():
+    """Returns top 10 targeted brands with finding count and max risk score."""
+    with get_readonly_connection() as conn:
+        rows = conn.execute(
+            """
+            SELECT matched_brand, COUNT(*) as count, MAX(risk_score) as max_score
+            FROM domain_findings
+            WHERE matched_brand IS NOT NULL AND matched_brand != ''
+            GROUP BY matched_brand
+            ORDER BY count DESC
+            LIMIT 10
+            """
+        ).fetchall()
+
+        brands = [
+            {
+                "brand": r["matched_brand"],
+                "count": r["count"],
+                "max_score": r["max_score"],
+            }
+            for r in rows
+        ]
+
+        return {
+            "total_brands": len(brands),
+            "brands": brands,
+        }
+
+
+@app.get("/api/findings/{finding_id}", summary="Fetch single finding details with CSIRT draft report")
+@app.get("/findings/{finding_id}", include_in_schema=False)
+def get_finding_detail(finding_id: int):
+    """Returns complete technical details and generated incident report draft for a specific finding."""
+    with get_readonly_connection() as conn:
+        row = conn.execute(
+            """
+            SELECT id, domain, first_seen, registered_at, registrar, nameservers,
+                   matched_brand, match_method, risk_score, risk_level,
+                   is_live, in_public_blacklist_at_detection, campaign_id,
+                   reasoning
+            FROM domain_findings
+            WHERE id = ?
+            """,
+            (finding_id,),
+        ).fetchone()
+
+        if not row:
+            raise HTTPException(status_code=404, detail="Finding not found")
+
+        try:
+            draft = generate_report_draft(finding_id, conn)
+            draft_text = draft.draft_text
+            channels = [
+                {
+                    "name": c.name,
+                    "target_type": c.target_type,
+                    "contact": c.contact,
+                    "submission_method": c.submission_method,
+                    "notes": c.notes,
+                }
+                for c in draft.recommended_channels
+            ]
+        except Exception:
+            draft_text = ""
+            channels = []
+
+        return {
+            "id": row["id"],
+            "domain": row["domain"],
+            "domain_masked": mask_domain(row["domain"]),
+            "first_seen": row["first_seen"],
+            "registered_at": row["registered_at"],
+            "registrar": row["registrar"],
+            "nameservers": row["nameservers"],
+            "matched_brand": row["matched_brand"],
+            "match_method": row["match_method"],
+            "risk_score": row["risk_score"],
+            "risk_level": row["risk_level"],
+            "is_live": bool(row["is_live"]),
+            "in_public_blacklist": bool(row["in_public_blacklist_at_detection"]),
+            "campaign_id": row["campaign_id"],
+            "reasoning": row["reasoning"],
+            "csirt_report_draft": draft_text,
+            "escalation_channels": channels,
+        }
+
+
+class AnalyzeRequest(BaseModel):
+    text: str
+
+
+@app.post("/api/analyze", summary="Analyze suspicious message or URL in real-time (Mode A Sandbox)")
+@app.post("/analyze", include_in_schema=False)
+def post_analyze(req: AnalyzeRequest):
+    """Executes real-time Mode A cascading analysis on submitted message or URL."""
+    if not req.text or not req.text.strip():
+        raise HTTPException(status_code=400, detail="Text cannot be empty")
+
+    res = analyze_message(req.text.strip())
+    return {
+        "score": res.scoring.score,
+        "level": res.scoring.level,
+        "reasons": res.scoring.reasons,
+        "explanation": res.explanation,
+        "breakdown": [
+            {
+                "category": b.category,
+                "signal_name": b.signal_name,
+                "points": b.points,
+                "explanation": b.explanation,
+            }
+            for b in res.scoring.breakdown
+        ],
+        "entities": {
+            "urls": res.entities.urls,
+            "phone_numbers": res.entities.phone_numbers,
+            "bank_accounts": res.entities.bank_accounts,
+        },
+        "latency_ms": res.latency_ms,
+    }
 
 
 def get_eval_results_path() -> Path:

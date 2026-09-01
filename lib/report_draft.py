@@ -213,13 +213,13 @@ def format_report_text(
 
 def generate_report_draft(
     finding_id_or_domain: int | str,
-    db_path: Path | str = DEFAULT_DB_PATH,
+    db_path: Path | str | sqlite3.Connection = DEFAULT_DB_PATH,
 ) -> ReportDraft:
     """Generate structured report draft from database record.
 
     Args:
         finding_id_or_domain: Integer finding ID or domain string to lookup.
-        db_path: Path to siaga.db SQLite database.
+        db_path: Path to siaga.db SQLite database or active sqlite3.Connection.
 
     Returns:
         ReportDraft dataclass instance.
@@ -227,61 +227,65 @@ def generate_report_draft(
     Raises:
         ValueError: If finding is not found in database.
     """
-    resolved_db = Path(db_path)
-    db_uri = f"file:{resolved_db.resolve().as_posix()}?mode=ro"
-
-    with sqlite3.connect(db_uri, uri=True) as conn:
+    def _query(conn: sqlite3.Connection) -> sqlite3.Row | None:
         conn.row_factory = sqlite3.Row
-
-        if isinstance(finding_id_or_domain, int) or (isinstance(finding_id_or_domain, str) and finding_id_or_domain.isdigit()):
+        if isinstance(finding_id_or_domain, int) or (isinstance(finding_id_or_domain, str) and str(finding_id_or_domain).isdigit()):
             target_id = int(finding_id_or_domain)
-            row = conn.execute("SELECT * FROM domain_findings WHERE id = ?", (target_id,)).fetchone()
+            return conn.execute("SELECT * FROM domain_findings WHERE id = ?", (target_id,)).fetchone()
         else:
             clean_dom = str(finding_id_or_domain).strip().lower()
-            row = conn.execute("SELECT * FROM domain_findings WHERE domain = ? ORDER BY id DESC LIMIT 1", (clean_dom,)).fetchone()
+            return conn.execute("SELECT * FROM domain_findings WHERE domain = ? ORDER BY id DESC LIMIT 1", (clean_dom,)).fetchone()
 
-        if not row:
-            raise ValueError(f"Domain finding not found in database for query: '{finding_id_or_domain}'")
+    if isinstance(db_path, sqlite3.Connection):
+        row = _query(db_path)
+    else:
+        resolved_db = Path(db_path)
+        db_uri = f"file:{resolved_db.resolve().as_posix()}?mode=ro"
+        with sqlite3.connect(db_uri, uri=True) as conn:
+            row = _query(conn)
 
-        finding_id = row["id"]
-        domain = row["domain"]
-        brand = row["matched_brand"] or "Institusi Publik"
-        risk_score = row["risk_score"] or 0
-        risk_level = row["risk_level"] or "INDIKASI PENIPUAN"
-        first_seen = row["first_seen"] or ""
-        is_live = bool(row["is_live"])
-        match_method = row["match_method"] or "similarity"
-        registrar = row["registrar"]
-        nameservers = row["nameservers"]
-        reasoning = row["reasoning"]
+    if not row:
+        raise ValueError(f"Domain finding not found in database for query: '{finding_id_or_domain}'")
 
-        channels = get_recommended_channels(domain, brand)
-        draft_text = format_report_text(
-            finding_id=finding_id,
-            domain=domain,
-            brand=brand,
-            risk_score=risk_score,
-            risk_level=risk_level,
-            first_seen_iso=first_seen,
-            is_live=is_live,
-            match_method=match_method,
-            registrar=registrar,
-            nameservers=nameservers,
-            reasoning=reasoning,
-            channels=channels,
-        )
+    finding_id = row["id"]
+    domain = row["domain"]
+    brand = row["matched_brand"] or "Institusi Publik"
+    risk_score = row["risk_score"] or 0
+    risk_level = row["risk_level"] or "INDIKASI PENIPUAN"
+    first_seen = row["first_seen"] or ""
+    is_live = bool(row["is_live"])
+    match_method = row["match_method"] or "similarity"
+    registrar = row["registrar"]
+    nameservers = row["nameservers"]
+    reasoning = row["reasoning"]
 
-        return ReportDraft(
-            finding_id=finding_id,
-            domain=domain,
-            matched_brand=brand,
-            risk_score=risk_score,
-            risk_level=risk_level,
-            first_seen_wib=first_seen,
-            is_live=is_live,
-            match_method=match_method,
-            registrar=registrar,
-            nameservers=nameservers,
-            recommended_channels=channels,
-            draft_text=draft_text,
-        )
+    channels = get_recommended_channels(domain, brand)
+    draft_text = format_report_text(
+        finding_id=finding_id,
+        domain=domain,
+        brand=brand,
+        risk_score=risk_score,
+        risk_level=risk_level,
+        first_seen_iso=first_seen,
+        is_live=is_live,
+        match_method=match_method,
+        registrar=registrar,
+        nameservers=nameservers,
+        reasoning=reasoning,
+        channels=channels,
+    )
+
+    return ReportDraft(
+        finding_id=finding_id,
+        domain=domain,
+        matched_brand=brand,
+        risk_score=risk_score,
+        risk_level=risk_level,
+        first_seen_wib=first_seen,
+        is_live=is_live,
+        match_method=match_method,
+        registrar=registrar,
+        nameservers=nameservers,
+        recommended_channels=channels,
+        draft_text=draft_text,
+    )
