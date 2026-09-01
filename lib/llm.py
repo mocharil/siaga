@@ -398,6 +398,6 @@ def analyze_linguistics(
             db_path=db_path,
             model=model,
         )
-    except (LLMProviderError, LLMBudgetExceeded) as e:
+    except Exception as e:
         logger.warning("LLM API call bypassed (%s); using generic heuristic fallback.", e)
         return _heuristic_linguistic_fallback(text)

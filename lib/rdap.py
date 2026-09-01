@@ -106,18 +106,20 @@ def _fetch_iana_bootstrap(db_path: Path) -> dict[str, str]:
     services = data.get("services", [])
     now_iso = datetime.now(timezone.utc).isoformat()
     mapping: dict[str, str] = {}
+    for tld_list, url_list in services:
+        if not url_list:
+            continue
+        base_url = url_list[0]
+        if not base_url.endswith("/"):
+            base_url += "/"
+        for tld in tld_list:
+            clean_tld = tld.lower().strip(".")
+            mapping[clean_tld] = base_url
 
-    with sqlite3.connect(str(db_path)) as conn:
-        _init_rdap_tables(conn)
-        for tld_list, url_list in services:
-            if not url_list:
-                continue
-            base_url = url_list[0]
-            if not base_url.endswith("/"):
-                base_url += "/"
-            for tld in tld_list:
-                clean_tld = tld.lower().strip(".")
-                mapping[clean_tld] = base_url
+    try:
+        with sqlite3.connect(str(db_path)) as conn:
+            _init_rdap_tables(conn)
+            for clean_tld, base_url in mapping.items():
                 conn.execute(
                     """
                     INSERT INTO rdap_bootstrap (tld, rdap_url, fetched_at)
@@ -128,7 +130,9 @@ def _fetch_iana_bootstrap(db_path: Path) -> dict[str, str]:
                     """,
                     (clean_tld, base_url, now_iso),
                 )
-        conn.commit()
+            conn.commit()
+    except Exception as e:
+        logger.debug("Failed to cache IANA bootstrap in database: %s", e)
 
     return mapping
 
