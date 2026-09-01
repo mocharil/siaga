@@ -228,7 +228,7 @@ def get_readonly_connection(db_path: Path | None = None) -> Generator[sqlite3.Co
             detail=f"Database file not found at {target_path}",
         )
 
-    db_uri = f"file:{target_path.as_posix()}?mode=ro"
+    conn = None
     try:
         conn = sqlite3.connect(db_uri, uri=True, timeout=5.0)
         conn.row_factory = sqlite3.Row
@@ -248,10 +248,11 @@ def get_readonly_connection(db_path: Path | None = None) -> Generator[sqlite3.Co
             detail=f"Database connection error (WAL/locked): {e}",
         )
     finally:
-        try:
-            conn.close()
-        except Exception:
-            pass
+        if conn is not None:
+            try:
+                conn.close()
+            except Exception:
+                pass
 
 
 # ==============================================================================
