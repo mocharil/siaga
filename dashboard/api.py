@@ -118,6 +118,8 @@ def get_db_path() -> Path:
     return DEFAULT_DB_PATH
 
 
+from lib.db import init_db
+
 SNAPSHOT_PATH = BASE_DIR / "data" / "siaga_snapshot.json"
 
 
@@ -126,86 +128,27 @@ def load_in_memory_from_snapshot(snapshot_path: Path) -> sqlite3.Connection:
     import json
     mem_conn = sqlite3.connect(":memory:")
     mem_conn.row_factory = sqlite3.Row
+    init_db(mem_conn)
     with open(snapshot_path, "r", encoding="utf-8") as f:
         data = json.load(f)
 
-    # 1. daily_stats
-    mem_conn.execute("""
-        CREATE TABLE daily_stats (
-            date TEXT PRIMARY KEY,
-            domains_scanned INTEGER,
-            tahap1_passed INTEGER,
-            tahap2_passed INTEGER,
-            tahap3_assessed INTEGER,
-            domains_flagged INTEGER,
-            domains_live INTEGER,
-            flagged_not_in_blacklist INTEGER,
-            collector_ok INTEGER,
-            heartbeat_ok INTEGER,
-            peak_ram_mb REAL
-        )
-    """)
     for r in data.get("daily_stats", []):
-        mem_conn.execute("""
-            INSERT INTO daily_stats VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-        """, (
-            r.get("date"), r.get("domains_scanned"), r.get("tahap1_passed"), r.get("tahap2_passed"),
-            r.get("tahap3_assessed"), r.get("domains_flagged"), r.get("domains_live"),
-            r.get("flagged_not_in_blacklist"), r.get("collector_ok"), r.get("heartbeat_ok"),
-            r.get("peak_ram_mb"),
-        ))
+        keys = list(r.keys())
+        placeholders = ", ".join(["?"] * len(keys))
+        cols = ", ".join(keys)
+        mem_conn.execute(f"INSERT OR REPLACE INTO daily_stats ({cols}) VALUES ({placeholders})", list(r.values()))
 
-    # 2. domain_findings
-    mem_conn.execute("""
-        CREATE TABLE domain_findings (
-            id INTEGER PRIMARY KEY,
-            domain TEXT,
-            first_seen TEXT,
-            registered_at TEXT,
-            registrar TEXT,
-            matched_brand TEXT,
-            match_method TEXT,
-            risk_score INTEGER,
-            risk_level TEXT,
-            is_live INTEGER,
-            in_public_blacklist_at_detection INTEGER,
-            campaign_id INTEGER,
-            reasoning TEXT,
-            blacklist_listed_at TEXT
-        )
-    """)
     for r in data.get("domain_findings", []):
-        mem_conn.execute("""
-            INSERT INTO domain_findings (id, domain, first_seen, registered_at, registrar, matched_brand, match_method, risk_score, risk_level, is_live, in_public_blacklist_at_detection, campaign_id, reasoning, blacklist_listed_at)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-        """, (
-            r.get("id"), r.get("domain"), r.get("first_seen"), r.get("registered_at"),
-            r.get("registrar"), r.get("matched_brand"), r.get("match_method"),
-            r.get("risk_score"), r.get("risk_level"), r.get("is_live"),
-            r.get("in_public_blacklist_at_detection"), r.get("campaign_id"),
-            r.get("reasoning"), r.get("blacklist_listed_at"),
-        ))
+        keys = list(r.keys())
+        placeholders = ", ".join(["?"] * len(keys))
+        cols = ", ".join(keys)
+        mem_conn.execute(f"INSERT OR REPLACE INTO domain_findings ({cols}) VALUES ({placeholders})", list(r.values()))
 
-    # 3. collector_runs
-    mem_conn.execute("""
-        CREATE TABLE collector_runs (
-            id INTEGER PRIMARY KEY,
-            started_at TEXT,
-            finished_at TEXT,
-            source TEXT,
-            fetched INTEGER,
-            inserted_new INTEGER,
-            status TEXT
-        )
-    """)
     for r in data.get("collector_runs", []):
-        mem_conn.execute("""
-            INSERT INTO collector_runs (id, started_at, finished_at, source, fetched, inserted_new, status)
-            VALUES (?, ?, ?, ?, ?, ?, ?)
-        """, (
-            r.get("id"), r.get("started_at"), r.get("finished_at"), r.get("source"),
-            r.get("fetched"), r.get("inserted_new"), r.get("status"),
-        ))
+        keys = list(r.keys())
+        placeholders = ", ".join(["?"] * len(keys))
+        cols = ", ".join(keys)
+        mem_conn.execute(f"INSERT OR REPLACE INTO collector_runs ({cols}) VALUES ({placeholders})", list(r.values()))
 
     mem_conn.commit()
     return mem_conn
@@ -233,19 +176,22 @@ def get_readonly_connection(db_path: Path | None = None) -> Generator[sqlite3.Co
         conn = sqlite3.connect(db_uri, uri=True, timeout=5.0)
         conn.row_factory = sqlite3.Row
         yield conn
-    except sqlite3.OperationalError as e:
+    except Exception as e:
         if SNAPSHOT_PATH.exists():
-            logger.info("Falling back to in-memory snapshot database (serverless read-only mode).")
-            mem_conn = load_in_memory_from_snapshot(SNAPSHOT_PATH)
             try:
+                mem_conn = load_in_memory_from_snapshot(SNAPSHOT_PATH)
                 yield mem_conn
-            finally:
-                mem_conn.close()
-            return
+                return
+            except Exception as mem_err:
+                logger.error("Failed to load in-memory snapshot: %s", mem_err)
+                raise HTTPException(
+                    status_code=500,
+                    detail=f"Mem snapshot error: {mem_err} (orig: {e})",
+                )
         logger.error("Read-only database connection error: %s", e)
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-            detail=f"Database connection error (WAL/locked): {e}",
+            detail=f"Database connection error: {e}, snapshot_exists: {SNAPSHOT_PATH.exists()}, snapshot_path: {SNAPSHOT_PATH}",
         )
     finally:
         if conn is not None:
