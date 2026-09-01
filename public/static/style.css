@@ -974,6 +974,146 @@ input:checked + .toggle-slider:before {
 }
 
 /* =============================================================================
+   PAGINATION CONTROLS (TABLE & LISTS)
+   ============================================================================= */
+.table-pagination-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 16px;
+  background: var(--bg-card);
+  border: 1px solid var(--border-subtle);
+  border-top: none;
+  border-radius: 0 0 var(--radius-md) var(--radius-md);
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.list-pagination-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px 14px;
+  background: var(--bg-card);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-top: 4px;
+}
+
+.pagination-left {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.pagination-info {
+  font-size: 12px;
+  color: var(--text-muted);
+  font-weight: 500;
+}
+
+.page-size-wrap {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+.pagination-select {
+  padding: 4px 8px;
+  background: var(--bg-surface);
+  border: 1px solid var(--border-card);
+  border-radius: var(--radius-sm);
+  color: var(--text-primary);
+  font-size: 12px;
+  font-family: var(--font-sans);
+  outline: none;
+  cursor: pointer;
+  transition: border-color var(--transition-fast);
+}
+
+.pagination-select:focus {
+  border-color: var(--border-focus);
+}
+
+.pagination-right {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.pag-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 28px;
+  height: 28px;
+  padding: 0 6px;
+  background: var(--bg-surface);
+  border: 1px solid var(--border-card);
+  border-radius: var(--radius-sm);
+  color: var(--text-secondary);
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  user-select: none;
+}
+
+.pag-btn:hover:not(:disabled) {
+  background: var(--bg-card-hover);
+  border-color: var(--border-card-hover);
+  color: var(--text-primary);
+}
+
+.pag-btn:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+
+.pag-btn.active {
+  background: var(--accent-primary);
+  border-color: var(--accent-primary);
+  color: #FFFFFF;
+  font-weight: 700;
+}
+
+.pag-numbers-list {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.pag-ellipsis {
+  padding: 0 4px;
+  color: var(--text-muted);
+  font-size: 12px;
+}
+
+/* Brand & Cluster Search Headers */
+.brand-panel-header, .cluster-panel-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.brand-search-group, .cluster-search-group {
+  width: 220px;
+  min-width: 180px;
+}
+
+.brand-search-group input, .cluster-search-group input {
+  padding: 6px 28px 6px 30px;
+  font-size: 12px;
+}
+
+/* =============================================================================
    TAB 2: INTERACTIVE TRIAGE SANDBOX (MODE A)
    ============================================================================= */
 .sandbox-layout {

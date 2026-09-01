@@ -10,10 +10,68 @@ const state = {
   unmask: false,
   searchTerm: "",
   activeFilter: "all",
+  currentPage: 1,
+  pageSize: 10,
   statsToday: null,
   trendData: [],
   findings: [],
   brands: [],
+  brandSearchTerm: "",
+  brandCurrentPage: 1,
+  brandPageSize: 6,
+  clusters: [
+    {
+      id: "12",
+      title: "Klaster #12",
+      ns: "bumiayuvpn.web.id",
+      volume: "48 Domain",
+      desc: "Memanfaatkan wildcard subdomain berlapis untuk meniru portal Ruangguru, Shopee, dan Pos Indonesia secara terkoordinasi.",
+      tags: ["Wildcard NS", "Ruangguru", "Shopee", "Pos ID"]
+    },
+    {
+      id: "22",
+      title: "Klaster #22",
+      ns: "cfgs.web.id / ids-cfgs.web.id",
+      volume: "36 Domain",
+      desc: "Jaringan pendaftaran domain massal yang menargetkan sektor edukasi, bimbel, dan layanan keuangan mikro.",
+      tags: ["Mass Registration", "Fintech", "Edukasi"]
+    },
+    {
+      id: "44",
+      title: "Klaster #44",
+      ns: "swiftserve.com proxy",
+      volume: "24 Domain",
+      desc: "Mekanisme proksi reverse-proxy bertingkat untuk menyembunyikan IP hosting backend penipuan digital.",
+      tags: ["Reverse Proxy", "IP Masking", "Cloudflare"]
+    },
+    {
+      id: "51",
+      title: "Klaster #51",
+      ns: "dns-parking-asia.net",
+      volume: "18 Domain",
+      desc: "Sindikat pembuatan template phishing perbankan massal dengan payload sniffer APK.",
+      tags: ["Bank BCA", "Mandiri", "APK Sniffer"]
+    },
+    {
+      id: "63",
+      title: "Klaster #63",
+      ns: "ns1.secure-node.top",
+      volume: "14 Domain",
+      desc: "Pencatutan kementerian dan instansi pemerintah dengan spoofing domain kedinasan.",
+      tags: ["Kemenag", "Pemerintah", "Bansos"]
+    },
+    {
+      id: "77",
+      title: "Klaster #77",
+      ns: "cloudflare-managed.org",
+      volume: "11 Domain",
+      desc: "Distribusi tautan klaim hadiah dan voucher pulsa operator telekomunikasi.",
+      tags: ["Telkomsel", "Indosat", "Hadiah"]
+    }
+  ],
+  clusterSearchTerm: "",
+  clusterCurrentPage: 1,
+  clusterPageSize: 3,
   metrics: null,
   isAnalyzing: false,
 };
@@ -25,6 +83,8 @@ document.addEventListener("DOMContentLoaded", () => {
   initLiveClock();
   initTabNavigation();
   initTableControls();
+  initBrandControls();
+  initClusterControls();
   initSandbox();
   initModal();
   initKeyboardShortcuts();
@@ -381,7 +441,29 @@ function renderFindingsTable() {
     list = list.filter((f) => f.live_status === "active" || f.is_live);
   }
 
-  if (list.length === 0) {
+  const totalItems = list.length;
+  const totalPages = Math.max(1, Math.ceil(totalItems / state.pageSize));
+  if (state.currentPage > totalPages) state.currentPage = totalPages;
+  if (state.currentPage < 1) state.currentPage = 1;
+
+  const startIndex = (state.currentPage - 1) * state.pageSize;
+  const endIndex = Math.min(startIndex + state.pageSize, totalItems);
+  const pagedList = list.slice(startIndex, endIndex);
+
+  // Update Pagination Info
+  const infoEl = document.getElementById("tablePaginationInfo");
+  if (infoEl) {
+    if (totalItems === 0) {
+      infoEl.textContent = "Menampilkan 0–0 dari 0 domain";
+    } else {
+      infoEl.textContent = `Menampilkan ${startIndex + 1}–${endIndex} dari ${totalItems} domain`;
+    }
+  }
+
+  // Update Pagination Controls
+  renderTablePaginationControls(totalPages);
+
+  if (pagedList.length === 0) {
     tbody.innerHTML = `
       <tr>
         <td colspan="7" class="table-state-row">
@@ -392,7 +474,7 @@ function renderFindingsTable() {
     return;
   }
 
-  tbody.innerHTML = list
+  tbody.innerHTML = pagedList
     .map((f) => {
       const displayDomain = state.unmask ? f.domain_raw || f.domain : f.domain;
       const score = f.risk_score || 0;
@@ -448,6 +530,56 @@ function renderFindingsTable() {
   });
 }
 
+function renderTablePaginationControls(totalPages) {
+  const firstBtn = document.getElementById("pagFirstBtn");
+  const prevBtn = document.getElementById("pagPrevBtn");
+  const nextBtn = document.getElementById("pagNextBtn");
+  const lastBtn = document.getElementById("pagLastBtn");
+  const numList = document.getElementById("pagNumbersList");
+
+  if (firstBtn) firstBtn.disabled = state.currentPage <= 1;
+  if (prevBtn) prevBtn.disabled = state.currentPage <= 1;
+  if (nextBtn) nextBtn.disabled = state.currentPage >= totalPages;
+  if (lastBtn) lastBtn.disabled = state.currentPage >= totalPages;
+
+  if (!numList) return;
+
+  let pages = [];
+  const cur = state.currentPage;
+
+  if (totalPages <= 7) {
+    for (let i = 1; i <= totalPages; i++) pages.push(i);
+  } else {
+    pages.push(1);
+    if (cur > 3) pages.push("...");
+
+    const start = Math.max(2, cur - 1);
+    const end = Math.min(totalPages - 1, cur + 1);
+    for (let i = start; i <= end; i++) pages.push(i);
+
+    if (cur < totalPages - 2) pages.push("...");
+    pages.push(totalPages);
+  }
+
+  numList.innerHTML = pages
+    .map((p) => {
+      if (p === "...") return `<span class="pag-ellipsis">&hellip;</span>`;
+      const isActive = p === cur ? "active" : "";
+      return `<button class="pag-btn ${isActive}" data-page="${p}">${p}</button>`;
+    })
+    .join("");
+
+  numList.querySelectorAll(".pag-btn").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      const p = Number(btn.getAttribute("data-page"));
+      if (p && p !== state.currentPage) {
+        state.currentPage = p;
+        renderFindingsTable();
+      }
+    });
+  });
+}
+
 // Table Filter & Search Controls
 function initTableControls() {
   const searchInput = document.getElementById("domainSearchInput");
@@ -456,10 +588,57 @@ function initTableControls() {
   const unmaskToggle = document.getElementById("unmaskToggle");
   const toggleLabel = document.getElementById("toggleLabel");
   const exportBtn = document.getElementById("exportCsvBtn");
+  const pageSizeSelect = document.getElementById("pageSizeSelect");
+
+  const firstBtn = document.getElementById("pagFirstBtn");
+  const prevBtn = document.getElementById("pagPrevBtn");
+  const nextBtn = document.getElementById("pagNextBtn");
+  const lastBtn = document.getElementById("pagLastBtn");
+
+  // Page Size Change
+  pageSizeSelect?.addEventListener("change", (e) => {
+    state.pageSize = Number(e.target.value) || 10;
+    state.currentPage = 1;
+    renderFindingsTable();
+  });
+
+  // Pagination Navigation Buttons
+  firstBtn?.addEventListener("click", () => {
+    if (state.currentPage > 1) {
+      state.currentPage = 1;
+      renderFindingsTable();
+    }
+  });
+
+  prevBtn?.addEventListener("click", () => {
+    if (state.currentPage > 1) {
+      state.currentPage--;
+      renderFindingsTable();
+    }
+  });
+
+  nextBtn?.addEventListener("click", () => {
+    const listLen = state.findings.length;
+    const totalPages = Math.ceil(listLen / state.pageSize) || 1;
+    if (state.currentPage < totalPages) {
+      state.currentPage++;
+      renderFindingsTable();
+    }
+  });
+
+  lastBtn?.addEventListener("click", () => {
+    const listLen = state.findings.length;
+    const totalPages = Math.ceil(listLen / state.pageSize) || 1;
+    if (state.currentPage < totalPages) {
+      state.currentPage = totalPages;
+      renderFindingsTable();
+    }
+  });
 
   // Instant Search
   searchInput?.addEventListener("input", (e) => {
     state.searchTerm = e.target.value.trim();
+    state.currentPage = 1;
     if (clearBtn) clearBtn.style.display = state.searchTerm ? "block" : "none";
     renderFindingsTable();
   });
@@ -467,6 +646,7 @@ function initTableControls() {
   clearBtn?.addEventListener("click", () => {
     if (searchInput) searchInput.value = "";
     state.searchTerm = "";
+    state.currentPage = 1;
     clearBtn.style.display = "none";
     renderFindingsTable();
   });
@@ -477,6 +657,7 @@ function initTableControls() {
       filterPills.forEach((p) => p.classList.remove("active"));
       pill.classList.add("active");
       state.activeFilter = pill.getAttribute("data-filter");
+      state.currentPage = 1;
       renderFindingsTable();
     });
   });
@@ -523,6 +704,54 @@ function exportFindingsCsv() {
   document.body.removeChild(link);
 }
 
+// Brand Intelligence Controls & Pagination
+function initBrandControls() {
+  const brandSearch = document.getElementById("brandSearchInput");
+  const clearBrandBtn = document.getElementById("clearBrandSearchBtn");
+  const brandPrevBtn = document.getElementById("brandPrevBtn");
+  const brandNextBtn = document.getElementById("brandNextBtn");
+
+  brandSearch?.addEventListener("input", (e) => {
+    state.brandSearchTerm = e.target.value.trim();
+    state.brandCurrentPage = 1;
+    if (clearBrandBtn) clearBrandBtn.style.display = state.brandSearchTerm ? "block" : "none";
+    renderBrandsList(state.brands);
+  });
+
+  clearBrandBtn?.addEventListener("click", () => {
+    if (brandSearch) brandSearch.value = "";
+    state.brandSearchTerm = "";
+    state.brandCurrentPage = 1;
+    clearBrandBtn.style.display = "none";
+    renderBrandsList(state.brands);
+  });
+
+  brandPrevBtn?.addEventListener("click", () => {
+    if (state.brandCurrentPage > 1) {
+      state.brandCurrentPage--;
+      renderBrandsList(state.brands);
+    }
+  });
+
+  brandNextBtn?.addEventListener("click", () => {
+    const filtered = filterBrandList(state.brands);
+    const totalPages = Math.ceil(filtered.length / state.brandPageSize) || 1;
+    if (state.brandCurrentPage < totalPages) {
+      state.brandCurrentPage++;
+      renderBrandsList(state.brands);
+    }
+  });
+}
+
+function filterBrandList(brands) {
+  let list = brands || [];
+  if (state.brandSearchTerm) {
+    const q = state.brandSearchTerm.toLowerCase();
+    list = list.filter((b) => b.brand && b.brand.toLowerCase().includes(q));
+  }
+  return list;
+}
+
 // Brand Intelligence List
 async function fetchBrands() {
   try {
@@ -540,12 +769,58 @@ function renderBrandsList(brands) {
   const container = document.getElementById("brandsListContainer");
   if (!container) return;
 
-  if (!brands || brands.length === 0) {
-    container.innerHTML = `<p class="table-state-row">Memuat data sebaran brand...</p>`;
+  const filtered = filterBrandList(brands);
+  const totalItems = filtered.length;
+  const totalPages = Math.max(1, Math.ceil(totalItems / state.brandPageSize));
+  if (state.brandCurrentPage > totalPages) state.brandCurrentPage = totalPages;
+  if (state.brandCurrentPage < 1) state.brandCurrentPage = 1;
+
+  const startIndex = (state.brandCurrentPage - 1) * state.brandPageSize;
+  const endIndex = Math.min(startIndex + state.brandPageSize, totalItems);
+  const pagedList = filtered.slice(startIndex, endIndex);
+
+  // Update Brand Pagination Info & Buttons
+  const infoEl = document.getElementById("brandPaginationInfo");
+  const prevBtn = document.getElementById("brandPrevBtn");
+  const nextBtn = document.getElementById("brandNextBtn");
+  const numList = document.getElementById("brandPagNumbersList");
+
+  if (infoEl) {
+    if (totalItems === 0) {
+      infoEl.textContent = "Menampilkan 0–0 dari 0 brand";
+    } else {
+      infoEl.textContent = `Menampilkan ${startIndex + 1}–${endIndex} dari ${totalItems} brand`;
+    }
+  }
+
+  if (prevBtn) prevBtn.disabled = state.brandCurrentPage <= 1;
+  if (nextBtn) nextBtn.disabled = state.brandCurrentPage >= totalPages;
+
+  if (numList) {
+    numList.innerHTML = Array.from({ length: totalPages }, (_, i) => i + 1)
+      .map((p) => {
+        const isActive = p === state.brandCurrentPage ? "active" : "";
+        return `<button class="pag-btn ${isActive}" data-brand-page="${p}">${p}</button>`;
+      })
+      .join("");
+
+    numList.querySelectorAll(".pag-btn").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        const p = Number(btn.getAttribute("data-brand-page"));
+        if (p && p !== state.brandCurrentPage) {
+          state.brandCurrentPage = p;
+          renderBrandsList(state.brands);
+        }
+      });
+    });
+  }
+
+  if (pagedList.length === 0) {
+    container.innerHTML = `<p class="table-state-row">Tidak ada brand yang cocok dengan pencarian "${state.brandSearchTerm}".</p>`;
     return;
   }
 
-  container.innerHTML = brands
+  container.innerHTML = pagedList
     .map((b) => {
       const brandName = b.brand || "Lainnya";
       const initial = brandName.charAt(0).toUpperCase();
@@ -562,6 +837,135 @@ function renderBrandsList(brands) {
             </div>
           </div>
           <span class="brand-count-badge">${count} Domain</span>
+        </div>
+      `;
+    })
+    .join("");
+}
+
+// Cluster Intelligence Controls & Pagination
+function initClusterControls() {
+  const clusterSearch = document.getElementById("clusterSearchInput");
+  const clearClusterBtn = document.getElementById("clearClusterSearchBtn");
+  const clusterPrevBtn = document.getElementById("clusterPrevBtn");
+  const clusterNextBtn = document.getElementById("clusterNextBtn");
+
+  clusterSearch?.addEventListener("input", (e) => {
+    state.clusterSearchTerm = e.target.value.trim();
+    state.clusterCurrentPage = 1;
+    if (clearClusterBtn) clearClusterBtn.style.display = state.clusterSearchTerm ? "block" : "none";
+    renderClusterList();
+  });
+
+  clearClusterBtn?.addEventListener("click", () => {
+    if (clusterSearch) clusterSearch.value = "";
+    state.clusterSearchTerm = "";
+    state.clusterCurrentPage = 1;
+    clearClusterBtn.style.display = "none";
+    renderClusterList();
+  });
+
+  clusterPrevBtn?.addEventListener("click", () => {
+    if (state.clusterCurrentPage > 1) {
+      state.clusterCurrentPage--;
+      renderClusterList();
+    }
+  });
+
+  clusterNextBtn?.addEventListener("click", () => {
+    const filtered = filterClusterList();
+    const totalPages = Math.ceil(filtered.length / state.clusterPageSize) || 1;
+    if (state.clusterCurrentPage < totalPages) {
+      state.clusterCurrentPage++;
+      renderClusterList();
+    }
+  });
+
+  renderClusterList();
+}
+
+function filterClusterList() {
+  let list = state.clusters || [];
+  if (state.clusterSearchTerm) {
+    const q = state.clusterSearchTerm.toLowerCase();
+    list = list.filter(
+      (c) =>
+        (c.title && c.title.toLowerCase().includes(q)) ||
+        (c.ns && c.ns.toLowerCase().includes(q)) ||
+        (c.desc && c.desc.toLowerCase().includes(q)) ||
+        (c.tags && c.tags.some((t) => t.toLowerCase().includes(q)))
+    );
+  }
+  return list;
+}
+
+function renderClusterList() {
+  const container = document.getElementById("clusterCardsContainer");
+  if (!container) return;
+
+  const filtered = filterClusterList();
+  const totalItems = filtered.length;
+  const totalPages = Math.max(1, Math.ceil(totalItems / state.clusterPageSize));
+  if (state.clusterCurrentPage > totalPages) state.clusterCurrentPage = totalPages;
+  if (state.clusterCurrentPage < 1) state.clusterCurrentPage = 1;
+
+  const startIndex = (state.clusterCurrentPage - 1) * state.clusterPageSize;
+  const endIndex = Math.min(startIndex + state.clusterPageSize, totalItems);
+  const pagedList = filtered.slice(startIndex, endIndex);
+
+  // Update Cluster Pagination Info & Buttons
+  const infoEl = document.getElementById("clusterPaginationInfo");
+  const prevBtn = document.getElementById("clusterPrevBtn");
+  const nextBtn = document.getElementById("clusterNextBtn");
+  const numList = document.getElementById("clusterPagNumbersList");
+
+  if (infoEl) {
+    if (totalItems === 0) {
+      infoEl.textContent = "Menampilkan 0–0 dari 0 klaster";
+    } else {
+      infoEl.textContent = `Menampilkan ${startIndex + 1}–${endIndex} dari ${totalItems} klaster`;
+    }
+  }
+
+  if (prevBtn) prevBtn.disabled = state.clusterCurrentPage <= 1;
+  if (nextBtn) nextBtn.disabled = state.clusterCurrentPage >= totalPages;
+
+  if (numList) {
+    numList.innerHTML = Array.from({ length: totalPages }, (_, i) => i + 1)
+      .map((p) => {
+        const isActive = p === state.clusterCurrentPage ? "active" : "";
+        return `<button class="pag-btn ${isActive}" data-cluster-page="${p}">${p}</button>`;
+      })
+      .join("");
+
+    numList.querySelectorAll(".pag-btn").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        const p = Number(btn.getAttribute("data-cluster-page"));
+        if (p && p !== state.clusterCurrentPage) {
+          state.clusterCurrentPage = p;
+          renderClusterList();
+        }
+      });
+    });
+  }
+
+  if (pagedList.length === 0) {
+    container.innerHTML = `<p class="table-state-row">Tidak ada klaster infrastruktur yang cocok dengan "${state.clusterSearchTerm}".</p>`;
+    return;
+  }
+
+  container.innerHTML = pagedList
+    .map((c) => {
+      const tagsHtml = c.tags ? c.tags.map((t) => `<span class="status-pill">${escapeHtml(t)}</span>`).join(" ") : "";
+      return `
+        <div class="cluster-item">
+          <div class="cluster-item-head">
+            <span class="cluster-badge">${escapeHtml(c.title)}</span>
+            <strong class="cluster-ns-title">${escapeHtml(c.ns)}</strong>
+            <span class="cluster-volume-tag">${escapeHtml(c.volume)}</span>
+          </div>
+          <p class="cluster-item-desc">${escapeHtml(c.desc)}</p>
+          <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:8px;">${tagsHtml}</div>
         </div>
       `;
     })

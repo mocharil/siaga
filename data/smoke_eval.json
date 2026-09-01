@@ -1,6 +1,6 @@
 {
   "summary": {
-    "timestamp": "2026-09-01T23:01:10.879681+00:00",
+    "timestamp": "2026-09-01T23:20:12.701564+00:00",
     "total_samples": 2,
     "confusion_matrix": {
       "true_positives": 1,
@@ -16,10 +16,10 @@
       "false_positive_rate": 0.0
     },
     "latency_ms": {
-      "p50": 0.56,
-      "p95": 1.12,
-      "min": 0.01,
-      "max": 1.12
+      "p50": 1.66,
+      "p95": 3.31,
+      "min": 0.02,
+      "max": 3.31
     },
     "error_count": 0
   },
@@ -42,7 +42,7 @@
           "points": 98
         }
       ],
-      "latency_ms": 1.12,
+      "latency_ms": 3.31,
       "content": "bca-update-tarif.online"
     },
     {
@@ -57,7 +57,7 @@
         "Domain resmi / tidak mencatut institusi."
       ],
       "breakdown": [],
-      "latency_ms": 0.01,
+      "latency_ms": 0.02,
       "content": "bca.co.id"
     }
   ]

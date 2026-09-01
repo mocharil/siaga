@@ -327,6 +327,32 @@
             </tbody>
           </table>
         </div>
+
+        <!-- Table Pagination Footer -->
+        <div class="table-pagination-footer" id="tablePaginationFooter">
+          <div class="pagination-left">
+            <span class="pagination-info" id="tablePaginationInfo">Menampilkan 0–0 dari 0 domain</span>
+            <div class="page-size-wrap">
+              <label for="pageSizeSelect">Baris per halaman:</label>
+              <select id="pageSizeSelect" class="pagination-select">
+                <option value="10" selected>10</option>
+                <option value="25">25</option>
+                <option value="50">50</option>
+                <option value="100">100</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="pagination-right">
+            <button id="pagFirstBtn" class="pag-btn" title="Halaman Pertama" disabled>&laquo;</button>
+            <button id="pagPrevBtn" class="pag-btn" title="Halaman Sebelumnya" disabled>&lsaquo;</button>
+            <div class="pag-numbers-list" id="pagNumbersList">
+              <!-- Dynamically populated page buttons -->
+            </div>
+            <button id="pagNextBtn" class="pag-btn" title="Halaman Berikutnya" disabled>&rsaquo;</button>
+            <button id="pagLastBtn" class="pag-btn" title="Halaman Terakhir" disabled>&raquo;</button>
+          </div>
+        </div>
       </section>
     </main>
 
@@ -360,15 +386,15 @@
                 <span class="chip-dot dot-rose"></span>
                 <span>Shopee Grand Prize (Wildcard NS)</span>
               </button>
-              <button class="sample-preset-chip" data-sample="Paket Anda dengan resi POS-992147 tertahan karena data alamat belum lengkap. Unduh aplikasi pelacak resmi untuk verifikasi: pos-lacak-kurir.site/lacak.apk">
+              <button class="sample-preset-chip" data-sample="Paket Pos Indonesia tertahan karena alamat tidak lengkap. Unduh resi konfirmasi Surat_Tagihan_Pos.apk di pos-paket-lacak.top">
                 <span class="chip-dot dot-rose"></span>
                 <span>Pos Indonesia (Sniffer APK)</span>
               </button>
-              <button class="sample-preset-chip" data-sample="Promo bimbel online diskon 80% hari ini khusus pengguna baru. Akses modul belajar di belajar.ruangguru.com.idl-cfgs.web.id">
+              <button class="sample-preset-chip" data-sample="Pengumuman beasiswa belajar gratis Ruangguru semester baru. Akses modul pendaftaran di ruangguru-beasiswa.web.id">
                 <span class="chip-dot dot-amber"></span>
                 <span>Ruangguru Spoof (Subdomain)</span>
               </button>
-              <button class="sample-preset-chip" data-sample="Terima kasih atas transaksi Anda. Informasi resmi layanan perbankan dapat diakses melalui portal resmi www.klikbca.com atau idwebhost.com">
+              <button class="sample-preset-chip" data-sample="Informasi mutasi rekening dan layanan resmi nasabah Bank Mandiri di www.bankmandiri.co.id">
                 <span class="chip-dot dot-emerald"></span>
                 <span>Domain Resmi (Terverifikasi Aman)</span>
               </button>
@@ -376,23 +402,27 @@
           </div>
         </div>
 
-        <!-- Split-Pane Workspace -->
+        <!-- Two-Column Workspace -->
         <div class="sandbox-split-grid">
-          <!-- Input Editor -->
-          <div class="panel-card sandbox-input-panel">
+          <!-- Input Editor Column -->
+          <div class="panel-card sandbox-input-column">
             <div class="panel-header">
               <div class="panel-title-group">
-                <h3 class="panel-title">Teks Pesan / Tautan URL</h3>
-                <p class="panel-subtitle">Mendukung ekstraksi otomatis URL, no. telepon, &amp; rekening</p>
+                <h3 class="panel-title">Input Editor Pesan / URL</h3>
+                <p class="panel-subtitle">Mendukung format teks utuh, SMS, WhatsApp, atau raw URL domain</p>
               </div>
-              <span class="char-counter" id="sandboxCharCount">0 karakter</span>
+              <span id="sandboxCharCount" class="font-mono text-muted" style="font-size:11px;">0 karakter</span>
             </div>
 
-            <textarea id="sandboxInput" class="code-editor-textarea" placeholder="Tempel URL mencurigakan (contoh: bca-update.online) atau salinan pesan WhatsApp/SMS penipuan di sini..." rows="8"></textarea>
+            <div class="editor-textarea-wrapper">
+              <textarea id="sandboxInput" placeholder="Ketik atau tempel konten teks pesan, link SMS, atau URL di sini... Contoh: 'BCA verifikasi tarif di bca-online.xyz'"></textarea>
+            </div>
 
-            <div class="editor-action-bar">
-              <button id="clearSandboxBtn" class="action-btn">Bersihkan</button>
-              <button id="runAnalyzeBtn" class="action-btn action-btn-primary">
+            <div class="editor-footer-actions">
+              <button id="clearSandboxBtn" class="action-btn" style="background:transparent;border:none;color:var(--text-muted);">
+                <span>Bersihkan Input</span>
+              </button>
+              <button id="runAnalyzeBtn" class="action-btn btn-primary">
                 <svg class="btn-icon" viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round">
                   <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/>
                 </svg>
@@ -401,54 +431,94 @@
             </div>
           </div>
 
-          <!-- Evaluation Output Panel -->
-          <div class="panel-card sandbox-output-panel" id="sandboxResultCard">
-            <!-- Empty State -->
-            <div class="output-placeholder" id="resultPlaceholder">
+          <!-- Analysis Results Console Column -->
+          <div class="panel-card sandbox-result-column" id="sandboxResultPanel">
+            <div class="panel-header">
+              <div class="panel-title-group">
+                <h3 class="panel-title">Hasil Evaluasi AI &amp; Forensik</h3>
+                <p class="panel-subtitle">Hasil sintesis skor risiko, indikator linguistik, dan verifikasi teknis</p>
+              </div>
+              <span class="status-pill status-pill-cyan">Heuristik Real-Time</span>
+            </div>
+
+            <!-- Empty State / Radar Pulse -->
+            <div id="resultPlaceholder" class="result-empty-state">
               <div class="radar-pulse-ring"></div>
               <h3>Mesin Triage Siap</h3>
               <p>Pilih salah satu preset di atas atau masukkan teks/URL untuk melihat evaluasi teknis, pencatutan brand, dan draf laporan CSIRT.</p>
             </div>
 
-            <!-- Active Result View -->
-            <div class="output-result-view" id="resultContent" style="display:none;">
-              <div class="verdict-banner" id="resultVerdictBanner">
-                <div class="verdict-score-badge">
-                  <span class="score-current" id="resultScore">0</span>
-                  <span class="score-total">/100</span>
-                </div>
-                <div class="verdict-info-col">
-                  <div class="verdict-status-badge" id="resultLevelBadge">AMAN</div>
-                  <h3 class="verdict-headline" id="resultTitle">Hasil Evaluasi Ancaman</h3>
-                </div>
-                <div class="verdict-latency-col">
-                  <span class="latency-number" id="resultLatency">-- ms</span>
-                  <span class="latency-caption">Waktu Evaluasi</span>
+            <!-- Dynamic Result Card -->
+            <div id="resultContent" class="result-content-wrap" style="display:none;">
+              <!-- Score Gauge & Tier -->
+              <div class="verdict-summary-card">
+                <div class="verdict-score-side">
+                  <div class="score-dial">
+                    <span id="resultScore" class="score-big-num">0</span>
+                    <span class="score-out-of">/100</span>
+                  </div>
+                  <div>
+                    <span id="resultLevelBadge" class="verdict-status-badge">AMAN</span>
+                    <div class="verdict-latency">Waktu Pemrosesan: <strong id="resultLatency">4 ms</strong></div>
+                  </div>
                 </div>
               </div>
 
-              <!-- Evidence Section -->
-              <div class="result-section-box">
-                <h4 class="section-box-title">Bukti &amp; Indikasi Konkret Deteksi AI:</h4>
+              <!-- Primary Reasoning Bullets -->
+              <div class="evidence-box">
+                <h4 class="evidence-title">Indikator Bukti Utama:</h4>
                 <ul id="resultReasonsList" class="evidence-bullet-list">
-                  <!-- Populated by JS -->
+                  <!-- Populated via JS -->
                 </ul>
               </div>
 
-              <!-- Signal Breakdown -->
-              <div class="result-section-box">
-                <h4 class="section-box-title">Rincian Sinyal Skor (Cascading Multi-Tier):</h4>
-                <div class="signal-breakdown-list" id="resultBreakdownItems">
-                  <!-- Populated by JS -->
+              <!-- Signal Points Breakdown -->
+              <div class="signal-breakdown-box">
+                <h4 class="signal-breakdown-title">Rincian Akumulasi Skor Risiko:</h4>
+                <div id="resultBreakdownItems" class="signal-breakdown-list">
+                  <!-- Populated via JS -->
                 </div>
               </div>
 
-              <!-- Mitigation Advice -->
-              <div class="result-section-box advice-box" id="resultRecomBox">
-                <h4 class="section-box-title">Langkah Mitigasi &amp; Penanganan yang Disarankan:</h4>
-                <p id="resultRecomText" class="advice-text">--</p>
+              <!-- Recommendation Card -->
+              <div class="advice-box">
+                <div class="advice-head">
+                  <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+                  </svg>
+                  <strong>Rekomendasi Tindakan Cepat:</strong>
+                </div>
+                <p id="resultRecomText" class="advice-text"></p>
               </div>
             </div>
+          </div>
+        </div>
+
+        <!-- Evaluation Performance Footer -->
+        <div class="panel-card eval-benchmark-bar">
+          <div class="eval-stat-item">
+            <span class="eval-stat-lbl">Model Precision:</span>
+            <span class="eval-stat-val text-emerald" id="metricPrecision">100.00%</span>
+          </div>
+          <div class="eval-stat-divider"></div>
+          <div class="eval-stat-item">
+            <span class="eval-stat-lbl">Model Recall:</span>
+            <span class="eval-stat-val text-blue" id="metricRecall">91.80%</span>
+          </div>
+          <div class="eval-stat-divider"></div>
+          <div class="eval-stat-item">
+            <span class="eval-stat-lbl">F1-Score:</span>
+            <span class="eval-stat-val text-emerald" id="metricF1">0.9573</span>
+          </div>
+          <div class="eval-stat-divider"></div>
+          <div class="eval-stat-item">
+            <span class="eval-stat-lbl">Peak Memory:</span>
+            <span class="eval-stat-val font-mono" id="metricRam">32.8 MB</span>
+          </div>
+          <div class="eval-stat-divider"></div>
+          <div class="eval-stat-item">
+            <span class="eval-stat-lbl">Kondisi Kalibrasi:</span>
+            <span class="status-pill status-pill-emerald">CALIBRATED</span>
           </div>
         </div>
       </div>
@@ -461,36 +531,62 @@
       <div class="intelligence-grid">
         <!-- Top Targeted Brands -->
         <div class="panel-card">
-          <div class="panel-header">
+          <div class="panel-header brand-panel-header">
             <div class="panel-title-group">
               <h2 class="panel-title">Top Brand Paling Banyak Ditiru</h2>
               <p class="panel-subtitle">Distribusi upaya peniruan terhadap institusi perbankan, fintech, e-commerce, dan layanan publik</p>
             </div>
-            <span class="status-pill">Basis Data Real-Time</span>
+            <!-- Search input for Brand list -->
+            <div class="search-input-group brand-search-group">
+              <svg class="search-icon" viewBox="0 0 24 24" width="13" height="13" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round">
+                <circle cx="11" cy="11" r="8"/>
+                <line x1="21" y1="21" x2="16.65" y2="16.65"/>
+              </svg>
+              <input type="text" id="brandSearchInput" placeholder="Cari brand (BCA, GoPay)...">
+              <button id="clearBrandSearchBtn" class="clear-search-btn" style="display:none;">&times;</button>
+            </div>
           </div>
 
           <div id="brandsListContainer" class="brand-frequency-list">
             <!-- Dynamically populated via JS -->
           </div>
+
+          <!-- Brand Pagination Controls -->
+          <div class="list-pagination-footer" id="brandPaginationFooter">
+            <span class="pagination-info" id="brandPaginationInfo">Menampilkan 0–0 dari 0 brand</span>
+            <div class="pagination-right">
+              <button id="brandPrevBtn" class="pag-btn" title="Halaman Sebelumnya" disabled>&lsaquo;</button>
+              <div class="pag-numbers-list" id="brandPagNumbersList"></div>
+              <button id="brandNextBtn" class="pag-btn" title="Halaman Berikutnya" disabled>&rsaquo;</button>
+            </div>
+          </div>
         </div>
 
         <!-- Infrastructure Clusters & DNS Matrix -->
         <div class="panel-card">
-          <div class="panel-header">
+          <div class="panel-header cluster-panel-header">
             <div class="panel-title-group">
               <h2 class="panel-title">Klaster Infrastruktur &amp; Nameserver</h2>
               <p class="panel-subtitle">Korelasi infrastruktur DNS domain phishing berskala masif</p>
             </div>
-            <span class="status-pill status-pill-cyan">55 Klaster Kampanye</span>
+            <!-- Search input for Cluster list -->
+            <div class="search-input-group cluster-search-group">
+              <svg class="search-icon" viewBox="0 0 24 24" width="13" height="13" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round">
+                <circle cx="11" cy="11" r="8"/>
+                <line x1="21" y1="21" x2="16.65" y2="16.65"/>
+              </svg>
+              <input type="text" id="clusterSearchInput" placeholder="Cari klaster / NS...">
+              <button id="clearClusterSearchBtn" class="clear-search-btn" style="display:none;">&times;</button>
+            </div>
           </div>
 
           <div class="network-cluster-stats">
             <div class="cluster-metric-card">
-              <span class="cluster-metric-val text-blue">55</span>
+              <span class="cluster-metric-val text-blue" id="clusterTotalCount">55</span>
               <span class="cluster-metric-lbl">Kampanye Terklaster</span>
             </div>
             <div class="cluster-metric-card">
-              <span class="cluster-metric-val text-amber">6</span>
+              <span class="cluster-metric-val text-amber" id="clusterNsCount">6</span>
               <span class="cluster-metric-lbl">Klaster Nameserver Aktif</span>
             </div>
             <div class="cluster-metric-card">
@@ -499,32 +595,17 @@
             </div>
           </div>
 
-          <div class="cluster-cards-list">
-            <div class="cluster-item">
-              <div class="cluster-item-head">
-                <span class="cluster-badge">Klaster #12</span>
-                <strong class="cluster-ns-title">bumiayuvpn.web.id</strong>
-                <span class="cluster-volume-tag">48 Domain</span>
-              </div>
-              <p class="cluster-item-desc">Memanfaatkan wildcard subdomain berlapis untuk meniru portal Ruangguru, Shopee, dan Pos Indonesia secara terkoordinasi.</p>
-            </div>
+          <div class="cluster-cards-list" id="clusterCardsContainer">
+            <!-- Populated via JS with filter & pagination -->
+          </div>
 
-            <div class="cluster-item">
-              <div class="cluster-item-head">
-                <span class="cluster-badge">Klaster #22</span>
-                <strong class="cluster-ns-title">cfgs.web.id / ids-cfgs.web.id</strong>
-                <span class="cluster-volume-tag">36 Domain</span>
-              </div>
-              <p class="cluster-item-desc">Jaringan pendaftaran domain massal yang menargetkan sektor edukasi, bimbel, dan layanan keuangan mikro.</p>
-            </div>
-
-            <div class="cluster-item">
-              <div class="cluster-item-head">
-                <span class="cluster-badge">Klaster #44</span>
-                <strong class="cluster-ns-title">swiftserve.com proxy</strong>
-                <span class="cluster-volume-tag">24 Domain</span>
-              </div>
-              <p class="cluster-item-desc">Mekanisme proksi reverse-proxy bertingkat untuk menyembunyikan IP hosting backend penipuan digital.</p>
+          <!-- Cluster Pagination Controls -->
+          <div class="list-pagination-footer" id="clusterPaginationFooter">
+            <span class="pagination-info" id="clusterPaginationInfo">Menampilkan 0–0 dari 0 klaster</span>
+            <div class="pagination-right">
+              <button id="clusterPrevBtn" class="pag-btn" title="Halaman Sebelumnya" disabled>&lsaquo;</button>
+              <div class="pag-numbers-list" id="clusterPagNumbersList"></div>
+              <button id="clusterNextBtn" class="pag-btn" title="Halaman Berikutnya" disabled>&rsaquo;</button>
             </div>
           </div>
         </div>
