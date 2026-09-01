@@ -69,45 +69,52 @@ class LLMProviderError(LLMError):
 
 def _init_llm_tables(conn: sqlite3.Connection) -> None:
     """Initialize SQLite table for tracking daily token usage."""
-    conn.execute(
-        """
-        CREATE TABLE IF NOT EXISTS llm_usage (
-            date TEXT PRIMARY KEY,
-            prompt_tokens INTEGER DEFAULT 0,
-            completion_tokens INTEGER DEFAULT 0,
-            total_tokens INTEGER DEFAULT 0,
-            call_count INTEGER DEFAULT 0
-        );
-        """
-    )
-    conn.commit()
+    try:
+        conn.execute(
+            """
+            CREATE TABLE IF NOT EXISTS llm_usage (
+                date TEXT PRIMARY KEY,
+                prompt_tokens INTEGER DEFAULT 0,
+                completion_tokens INTEGER DEFAULT 0,
+                total_tokens INTEGER DEFAULT 0,
+                call_count INTEGER DEFAULT 0
+            );
+            """
+        )
+        conn.commit()
+    except Exception as e:
+        logger.debug("Failed to init llm tables (read-only filesystem): %s", e)
 
 
 def get_daily_usage(date_str: str, db_path: Path) -> dict[str, int]:
     """Retrieve token usage statistics for a given UTC date (YYYY-MM-DD)."""
-    with sqlite3.connect(str(db_path)) as conn:
-        _init_llm_tables(conn)
-        cur = conn.execute(
-            """
-            SELECT prompt_tokens, completion_tokens, total_tokens, call_count
-            FROM llm_usage WHERE date = ?
-            """,
-            (date_str,),
-        )
-        row = cur.fetchone()
-        if row:
-            return {
-                "prompt_tokens": row[0],
-                "completion_tokens": row[1],
-                "total_tokens": row[2],
-                "call_count": row[3],
-            }
-        return {
-            "prompt_tokens": 0,
-            "completion_tokens": 0,
-            "total_tokens": 0,
-            "call_count": 0,
-        }
+    try:
+        with sqlite3.connect(str(db_path)) as conn:
+            _init_llm_tables(conn)
+            cur = conn.execute(
+                """
+                SELECT prompt_tokens, completion_tokens, total_tokens, call_count
+                FROM llm_usage WHERE date = ?
+                """,
+                (date_str,),
+            )
+            row = cur.fetchone()
+            if row:
+                return {
+                    "prompt_tokens": row[0],
+                    "completion_tokens": row[1],
+                    "total_tokens": row[2],
+                    "call_count": row[3],
+                }
+    except Exception as e:
+        logger.debug("Failed to read daily usage (read-only filesystem): %s", e)
+
+    return {
+        "prompt_tokens": 0,
+        "completion_tokens": 0,
+        "total_tokens": 0,
+        "call_count": 0,
+    }
 
 
 def record_usage(
@@ -118,21 +125,24 @@ def record_usage(
 ) -> None:
     """Record consumed tokens to SQLite usage table."""
     total_tokens = prompt_tokens + completion_tokens
-    with sqlite3.connect(str(db_path)) as conn:
-        _init_llm_tables(conn)
-        conn.execute(
-            """
-            INSERT INTO llm_usage (date, prompt_tokens, completion_tokens, total_tokens, call_count)
-            VALUES (?, ?, ?, ?, 1)
-            ON CONFLICT(date) DO UPDATE SET
-                prompt_tokens = prompt_tokens + excluded.prompt_tokens,
-                completion_tokens = completion_tokens + excluded.completion_tokens,
-                total_tokens = total_tokens + excluded.total_tokens,
-                call_count = call_count + 1
-            """,
-            (date_str, prompt_tokens, completion_tokens, total_tokens),
-        )
-        conn.commit()
+    try:
+        with sqlite3.connect(str(db_path)) as conn:
+            _init_llm_tables(conn)
+            conn.execute(
+                """
+                INSERT INTO llm_usage (date, prompt_tokens, completion_tokens, total_tokens, call_count)
+                VALUES (?, ?, ?, ?, 1)
+                ON CONFLICT(date) DO UPDATE SET
+                    prompt_tokens = prompt_tokens + excluded.prompt_tokens,
+                    completion_tokens = completion_tokens + excluded.completion_tokens,
+                    total_tokens = total_tokens + excluded.total_tokens,
+                    call_count = call_count + 1
+                """,
+                (date_str, prompt_tokens, completion_tokens, total_tokens),
+            )
+            conn.commit()
+    except Exception as e:
+        logger.debug("Failed to record token usage (read-only filesystem): %s", e)
 
 
 def _extract_json_from_text(raw_text: str) -> dict:

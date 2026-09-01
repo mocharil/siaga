@@ -437,7 +437,12 @@ def post_analyze(req: AnalyzeRequest):
     if not req.text or not req.text.strip():
         raise HTTPException(status_code=400, detail="Text cannot be empty")
 
-    res = analyze_message(req.text.strip())
+    try:
+        res = analyze_message(req.text.strip())
+    except Exception as exc:
+        logger.warning("analyze_message failed in serverless context: %s", exc)
+        raise HTTPException(status_code=503, detail=f"Analysis engine temporarily unavailable: {exc}")
+
     return {
         "score": res.scoring.score,
         "level": res.scoring.level,

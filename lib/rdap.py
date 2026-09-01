@@ -45,35 +45,32 @@ class DomainInfo:
 
 def _init_rdap_tables(conn: sqlite3.Connection) -> None:
     """Initialize SQLite caching and bootstrap tables if they do not exist."""
-    conn.execute(
-        """
-        CREATE TABLE IF NOT EXISTS rdap_cache (
-            domain TEXT PRIMARY KEY,
-            registration_date TEXT,
-            registrar TEXT,
-            nameservers TEXT,
-            status TEXT,
-            is_not_found INTEGER DEFAULT 0,
-            fetched_at TIMESTAMP NOT NULL
-        );
-        """
-    )
-    conn.execute(
-        """
-        CREATE INDEX IF NOT EXISTS idx_rdap_cache_fetched_at
-        ON rdap_cache(fetched_at);
-        """
-    )
-    conn.execute(
-        """
-        CREATE TABLE IF NOT EXISTS rdap_bootstrap (
-            tld TEXT PRIMARY KEY,
-            rdap_url TEXT NOT NULL,
-            fetched_at TIMESTAMP NOT NULL
-        );
-        """
-    )
-    conn.commit()
+    try:
+        conn.execute(
+            """
+            CREATE TABLE IF NOT EXISTS rdap_cache (
+                domain TEXT PRIMARY KEY,
+                registration_date TEXT,
+                registrar TEXT,
+                nameservers TEXT,
+                status TEXT,
+                is_not_found INTEGER DEFAULT 0,
+                fetched_at TIMESTAMP NOT NULL
+            );
+            """
+        )
+        conn.execute(
+            """
+            CREATE TABLE IF NOT EXISTS rdap_bootstrap (
+                tld TEXT PRIMARY KEY,
+                rdap_url TEXT NOT NULL,
+                fetched_at TIMESTAMP NOT NULL
+            );
+            """
+        )
+        conn.commit()
+    except Exception as e:
+        logger.debug("Failed to init rdap tables (read-only filesystem): %s", e)
 
 
 def _get_ssl_context() -> ssl.SSLContext:

@@ -103,22 +103,25 @@ class ModeAResult:
 
 def _init_scoring_tables(conn: sqlite3.Connection) -> None:
     """Initialize table for message analyses adhering to PDP privacy (storing hash, not text)."""
-    conn.execute(
-        """
-        CREATE TABLE IF NOT EXISTS message_analyses (
-            id              INTEGER PRIMARY KEY AUTOINCREMENT,
-            received_at     TIMESTAMP NOT NULL,
-            channel         TEXT DEFAULT 'telegram',
-            message_hash    TEXT NOT NULL,
-            urls_found      INTEGER DEFAULT 0,
-            risk_score      INTEGER NOT NULL,
-            risk_level      TEXT NOT NULL,
-            latency_ms      INTEGER NOT NULL,
-            report_drafted  BOOLEAN DEFAULT 0
-        );
-        """
-    )
-    conn.commit()
+    try:
+        conn.execute(
+            """
+            CREATE TABLE IF NOT EXISTS message_analyses (
+                id              INTEGER PRIMARY KEY AUTOINCREMENT,
+                received_at     TIMESTAMP NOT NULL,
+                channel         TEXT DEFAULT 'telegram',
+                message_hash    TEXT NOT NULL,
+                urls_found      INTEGER DEFAULT 0,
+                risk_score      INTEGER NOT NULL,
+                risk_level      TEXT NOT NULL,
+                latency_ms      INTEGER NOT NULL,
+                report_drafted  BOOLEAN DEFAULT 0
+            );
+            """
+        )
+        conn.commit()
+    except Exception as e:
+        logger.debug("Failed to init scoring tables (read-only filesystem): %s", e)
 
 
 def _calculate_domain_age_days(registration_date_str: str | None) -> int | None:
@@ -408,8 +411,8 @@ def analyze_message(
                 ),
             )
             conn.commit()
-    except sqlite3.Error as e:
-        logger.warning("Failed to record message_analyses: %s", e)
+    except Exception as e:
+        logger.debug("Failed to record message_analyses (likely read-only DB): %s", e)
 
     return ModeAResult(
         raw_message_hash=msg_hash,
