@@ -25,7 +25,9 @@
 - [x] **Dua Backlink Wajib (Anchor Text Persis):**
   - [x] Anchor **`[AI Hosting](https://idwebhost.com/ai-hosting/)`** terpasang secara kontekstual pada Bagian 5 (Menjalankannya di Lingkungan Server).
   - [x] Anchor **`[Cloud VPS](https://cloudbaik.com)`** terpasang secara kontekstual pada Bagian 4 (Arsitektur).
-- [x] **Tautan Repositori GitHub:** Tautan repositori publik `https://github.com/idwebhost-pandi/siaga` tercantum di bagian atas dan Bagian 4.
+- [x] **Tautan Repositori GitHub & Live Webapp:**
+  - Repositori Publik: `https://github.com/mocharil/siaga`
+  - Live Web Dashboard: `https://siaga-lake.vercel.app`
 - [x] **Kejujuran Teknis & Evaluasi:** Mencantumkan bagian *"Kegagalan Nyata, Bug yang Ditemukan, dan Pelajaran Berharga"* (UTC vs WIB, hardcoded metrics, validasi kontak BSSN/PANDI).
 - [x] **Kesesuaian Angka:** Seluruh angka di artikel identik dengan video dan snapshot database.
 - [x] **Platform Publik:** Dipublikasikan di platform otoritas tinggi (Dev.to / LinkedIn Articles / Medium) tanpa paywall dan diajukan ke Google Search Console.

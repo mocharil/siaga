@@ -52,20 +52,6 @@ app = FastAPI(
     redoc_url=None,
 )
 
-
-@app.get("/api/debug_path", include_in_schema=False)
-def debug_path():
-    import os
-    data_dir = BASE_DIR / "data"
-    return {
-        "cwd": os.getcwd(),
-        "api_file": str(Path(__file__).resolve()),
-        "base_dir": str(BASE_DIR),
-        "snapshot_path": str(SNAPSHOT_PATH),
-        "snapshot_exists": SNAPSHOT_PATH.exists(),
-        "files_in_data": [p.name for p in data_dir.glob("*")] if data_dir.exists() else "data_not_found",
-    }
-
 # Mount static directory for frontend assets
 if STATIC_DIR.exists():
     app.mount("/static", StaticFiles(directory=str(STATIC_DIR)), name="static")

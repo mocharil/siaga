@@ -3,7 +3,8 @@
 > **Artikel Publikasi Resmi — AI HackFest 2026 (IDwebhost × PANDI)**  
 > **Kategori:** Digital Safety & Public Good  
 > **Framework:** OpenClaw AI  
-> **Repositori Kode:** [GitHub: IDwebhost / SIAGA Phishing Intelligence](https://github.com/idwebhost-pandi/siaga)  
+> **Repositori Kode:** [GitHub: mocharil / siaga](https://github.com/mocharil/siaga)  
+> **Live Web Dashboard:** [https://siaga-lake.vercel.app](https://siaga-lake.vercel.app)  
 > **Data Operasional:** Snapshot per 01 September 2026 (Operasional Aktif 5 Hari)
 
 ---
@@ -64,7 +65,8 @@ Memproses 10.000 hingga 30.000 domain baru setiap hari langsung menggunakan mode
 Dengan arsitektur ini, konsumsi token LLM terpangkas hingga **98%**, memungkinkan operasional intelijen ancaman berdaya guna tinggi dengan biaya minimal di atas infrastruktur server [Cloud VPS](https://cloudbaik.com).
 
 Kode sumber lengkap, skema basis data SQLite terisolasi, dan modul evaluasi model SIAGA tersedia secara terbuka pada repositori GitHub resmi kami di:  
-👉 **[GitHub: IDwebhost / SIAGA Phishing Intelligence](https://github.com/idwebhost-pandi/siaga)**.
+👉 **[GitHub: mocharil / siaga](https://github.com/mocharil/siaga)**, serta dapat diakses secara interaktif melalui live web dashboard di:  
+🌐 **[Live Web Dashboard: https://siaga-lake.vercel.app](https://siaga-lake.vercel.app)**.
 
 ---
 

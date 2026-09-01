@@ -9,9 +9,11 @@
 ![Recall](https://img.shields.io/badge/recall-91.8%25-blue.svg)
 ![F1-Score](https://img.shields.io/badge/F1--score-0.9573-success.svg)
 ![Privacy](https://img.shields.io/badge/privacy-UU%20PDP%20Compliant-purple.svg)
+![Live Dashboard](https://img.shields.io/badge/live%20demo-siaga--lake.vercel.app-blueviolet.svg)
 
 **Agent AI Otonom Pemantau Phishing Proaktif Berbasis Certificate Transparency dan Arsitektur Hemat Token**  
-*Karya untuk AI HackFest 2026 (IDwebhost × PANDI) — Kategori Digital Safety & Public Good*
+*Karya untuk AI HackFest 2026 (IDwebhost × PANDI) — Kategori Digital Safety & Public Good*  
+🌐 **Live Web Dashboard:** [https://siaga-lake.vercel.app](https://siaga-lake.vercel.app) | 📦 **Repository:** [https://github.com/mocharil/siaga](https://github.com/mocharil/siaga)
 
 </div>
 
