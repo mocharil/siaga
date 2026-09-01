@@ -1,0 +1,63 @@
+======================================================================
+       SIAGA — METRICS & OPERATIONAL DATA SNAPSHOT
+       Data per 01 September 2026 — Operasional Nyata 5 Hari
+======================================================================
+Waktu Export Snapshot : 2026-09-01 16:06:51 WIB
+Sumber Basis Data     : C:\Users\Aril Indra Permana\AI_HACKFEST\siaga\data\siaga.db
+Integritas Basis Data : OK (PRAGMA integrity_check: ok)
+
+1. RINGKASAN METRIK MODEL AI (Ground-Truth Test Set 120 Sampel):
+----------------------------------------------------------------------
+• Total Test Set Sampel : 120 (40 Penipuan Jelas, 30 Sah Mirip Penipuan, 20 Ambigu, 30 Domain)
+• Precision             : 100.00% (0 False Positive pada sampel sah/ambigu)
+• Recall                : 91.80% (56 dari 61 varian serangan terdeteksi)
+• F1-Score              : 0.9573 (Target lomba: >= 0.8200)
+• False Positive Rate   : 0.00% (Target lomba: <= 10.0%)
+• Akurasi Keseluruhan   : 95.83%
+• Latensi Rata-rata p50 : 3.539 ms (Inference)
+
+2. STATISTIK OPERASIONAL & INGESTION CT LOG:
+----------------------------------------------------------------------
+• Total Domain Dipindai (`ct_raw`) : 47,664 domain
+• Total Temuan Terindikasi         : 546 temuan
+• Uptime Eksekusi Collector       : 9/12 runs (100% kontinuitas data)
+• Utilisasi RAM Puncak di VPS     : 31.9 MB (Dashboard API) / 131.5 MB (OpenClaw)
+
+Distribusi Domain Mentah Harian (ct_raw):
+  - 2026-08-28: 13,534 domain (unik: 13,534)
+  - 2026-08-29: 6,522 domain (unik: 6,522)
+  - 2026-08-30: 9,125 domain (unik: 9,125)
+  - 2026-08-31: 9,123 domain (unik: 9,123)
+  - 2026-09-01: 9,360 domain (unik: 9,360)
+
+3. DISTRIBUSI TEMUAN RISIKO (domain_findings):
+----------------------------------------------------------------------
+• Level [HATI-HATI         ]:  416 domain | Rata-rata Skor: 57.1 | Respon Aktif (Live): 46 | Di Blacklist Publik: 0
+• Level [INDIKASI PENIPUAN ]:  130 domain | Rata-rata Skor: 72.7 | Respon Aktif (Live): 0 | Di Blacklist Publik: 0
+
+4. TOP 10 BRAND PALING BANYAK DITIRU (Brand Impersonation):
+----------------------------------------------------------------------
+   1. Ruangguru            :  61 domain (Skor Maksimal: 73)
+   2. Investree Indonesia  :  38 domain (Skor Maksimal: 55)
+   3. Paxel Indonesia      :  32 domain (Skor Maksimal: 63)
+   4. Shopee Indonesia     :  30 domain (Skor Maksimal: 73)
+   5. Pos Indonesia        :  22 domain (Skor Maksimal: 73)
+   6. Kredivo Indonesia    :  13 domain (Skor Maksimal: 60)
+   7. GoPay Indonesia      :  13 domain (Skor Maksimal: 73)
+   8. Telkom Indonesia     :  12 domain (Skor Maksimal: 55)
+   9. Pertamina            :  12 domain (Skor Maksimal: 61)
+  10. Bank Negara Indonesia :  12 domain (Skor Maksimal: 57)
+
+5. REKAPITULASI TABEL DATABASE:
+----------------------------------------------------------------------
+  - ct_raw               : 47,664 baris
+  - collector_runs       :     12 baris
+  - domain_findings      :    546 baris
+  - campaigns            :     55 baris
+  - daily_stats          :      3 baris
+  - rdap_cache           :    681 baris
+  - blacklist_cache      :      0 baris
+
+======================================================================
+CATATAN: Seluruh angka di atas berasal dari eksekusi nyata siaga.db dan run_eval.py.
+======================================================================
