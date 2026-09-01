@@ -165,15 +165,17 @@ def get_readonly_connection(db_path: Path | None = None) -> Generator[sqlite3.Co
 
     conn = None
     if target_path.exists():
+        c = None
         try:
             db_uri = f"file:{target_path.as_posix()}?mode=ro"
-            conn = sqlite3.connect(db_uri, uri=True, timeout=5.0)
-            conn.row_factory = sqlite3.Row
-            conn.execute("SELECT 1")  # Verify read capability
+            c = sqlite3.connect(db_uri, uri=True, timeout=5.0)
+            c.row_factory = sqlite3.Row
+            c.execute("SELECT COUNT(*) FROM daily_stats").fetchone()  # Verify table read capability
+            conn = c
         except Exception:
-            if conn is not None:
+            if c is not None:
                 try:
-                    conn.close()
+                    c.close()
                 except Exception:
                     pass
             conn = None
