@@ -1,0 +1,64 @@
+{
+  "summary": {
+    "timestamp": "2026-09-01T23:01:10.879681+00:00",
+    "total_samples": 2,
+    "confusion_matrix": {
+      "true_positives": 1,
+      "false_positives": 0,
+      "true_negatives": 1,
+      "false_negatives": 0
+    },
+    "metrics": {
+      "accuracy": 1.0,
+      "precision": 1.0,
+      "recall": 1.0,
+      "f1_score": 1.0,
+      "false_positive_rate": 0.0
+    },
+    "latency_ms": {
+      "p50": 0.56,
+      "p95": 1.12,
+      "min": 0.01,
+      "max": 1.12
+    },
+    "error_count": 0
+  },
+  "errors": [],
+  "results": [
+    {
+      "id": "s1",
+      "type": "domain",
+      "ground_truth": "scam",
+      "predicted": "scam",
+      "is_correct": true,
+      "score": 98,
+      "level": "INDIKASI PENIPUAN",
+      "reasons": [
+        "Kemiripan domain dengan Bank Central Asia (keyword)"
+      ],
+      "breakdown": [
+        {
+          "signal": "keyword",
+          "points": 98
+        }
+      ],
+      "latency_ms": 1.12,
+      "content": "bca-update-tarif.online"
+    },
+    {
+      "id": "s2",
+      "type": "domain",
+      "ground_truth": "legit",
+      "predicted": "legit",
+      "is_correct": true,
+      "score": 0,
+      "level": "AMAN",
+      "reasons": [
+        "Domain resmi / tidak mencatut institusi."
+      ],
+      "breakdown": [],
+      "latency_ms": 0.01,
+      "content": "bca.co.id"
+    }
+  ]
+}
