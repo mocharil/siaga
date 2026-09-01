@@ -1,1 +1,9 @@
-{}
+{
+  "routes": [
+    { "src": "/static/(.*)", "dest": "/public/static/$1" },
+    { "src": "/(.*)", "methods": ["POST", "PUT", "DELETE", "PATCH"], "dest": "/api/index.py" },
+    { "src": "/analyze", "methods": ["POST"], "dest": "/api/index.py" },
+    { "src": "/(health|stats|findings|metrics|analyze|docs|openapi\\.json)(.*)", "dest": "/api/index.py" },
+    { "src": "/", "dest": "/public/index.html" }
+  ]
+}
