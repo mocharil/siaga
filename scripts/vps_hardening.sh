@@ -32,6 +32,11 @@ if [[ $EUID -ne 0 ]]; then
 fi
 
 TARGET_USER="${1:-siaga}"
+# Detect configured SSH port from sshd_config or default to $2 / 4422 / 22
+DETECTED_PORT=$(grep -E '^[# ]*Port ' /etc/ssh/sshd_config 2>/dev/null | grep -v '^#' | awk '{print $2}' | head -n 1 || true)
+SSH_PORT="${2:-${DETECTED_PORT:-4422}}"
+
+echo -e "${CYAN}[INFO] Target User: '${TARGET_USER}', Target SSH Port: ${SSH_PORT}${NC}"
 
 echo -e "${YELLOW}[1/6] Memperbarui paket sistem dan memasang utilitas keamanan...${NC}"
 export DEBIAN_FRONTEND=noninteractive
@@ -84,7 +89,10 @@ echo -e "${YELLOW}[3/6] Mengonfigurasi hardening SSH (Key-Only, No Root, No Pass
 SSHD_CONF_DIR="/etc/ssh/sshd_config.d"
 mkdir -p "$SSHD_CONF_DIR"
 
-cat << 'EOF' > "$SSHD_CONF_DIR/99-siaga-hardening.conf"
+# Clean up cloud-init overrides if present so our policy is absolute
+rm -f "$SSHD_CONF_DIR/50-cloud-init.conf" "$SSHD_CONF_DIR/60-cloudimg-settings.conf" 2>/dev/null || true
+
+cat << 'EOF' > "$SSHD_CONF_DIR/00-siaga-hardening.conf"
 # SIAGA Hardened SSH Configuration (T09)
 PermitRootLogin no
 PasswordAuthentication no
@@ -100,11 +108,11 @@ EOF
 
 # Test SSH configuration before reloading
 if sshd -t; then
-    systemctl reload ssh || systemctl reload sshd || service ssh reload || true
-    echo -e "${GREEN}[OK] Konfigurasi SSH valid dan di-reload.${NC}"
+    systemctl restart ssh || systemctl restart sshd || service ssh restart || true
+    echo -e "${GREEN}[OK] Konfigurasi SSH valid dan di-restart.${NC}"
 else
     echo -e "${RED}[ERROR] Konfigurasi SSH tidak valid! Mengembalikan perubahan...${NC}"
-    rm -f "$SSHD_CONF_DIR/99-siaga-hardening.conf"
+    rm -f "$SSHD_CONF_DIR/00-siaga-hardening.conf"
     exit 1
 fi
 
@@ -118,28 +126,29 @@ ufw --force reset >/dev/null 2>&1 || true
 ufw default deny incoming
 ufw default allow outgoing
 
-# Allow SSH
-ufw allow 22/tcp comment 'SSH Port'
+# Allow SSH on configured port
+ufw allow "${SSH_PORT}/tcp" comment "SSH Port ${SSH_PORT}"
 
 # OpenClaw Gateway 18789 is strictly loopback only. UFW denies all incoming by default.
 # Only local process or SSH tunnel to 127.0.0.1 can reach it.
 
 ufw --force enable
-echo -e "${GREEN}[OK] UFW aktif dengan proteksi default DENY incoming.${NC}"
+echo -e "${GREEN}[OK] UFW aktif dengan proteksi default DENY incoming (SSH port ${SSH_PORT} diizinkan).${NC}"
 
 # ------------------------------------------------------------------------------
 # 5. Fail2ban & Unattended Upgrades
 # ------------------------------------------------------------------------------
 echo -e "${YELLOW}[5/6] Mengaktifkan Fail2ban dan Unattended Upgrades...${NC}"
-cat << 'EOF' > /etc/fail2ban/jail.local
+cat << EOF > /etc/fail2ban/jail.local
 [DEFAULT]
 bantime = 1h
 findtime = 10m
 maxretry = 3
+backend = systemd
 
 [sshd]
 enabled = true
-port = 22
+port = ${SSH_PORT}
 EOF
 
 systemctl enable fail2ban >/dev/null 2>&1 || true
