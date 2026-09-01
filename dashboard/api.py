@@ -234,6 +234,14 @@ def get_readonly_connection(db_path: Path | None = None) -> Generator[sqlite3.Co
         conn.row_factory = sqlite3.Row
         yield conn
     except sqlite3.OperationalError as e:
+        if SNAPSHOT_PATH.exists():
+            logger.info("Falling back to in-memory snapshot database (serverless read-only mode).")
+            mem_conn = load_in_memory_from_snapshot(SNAPSHOT_PATH)
+            try:
+                yield mem_conn
+            finally:
+                mem_conn.close()
+            return
         logger.error("Read-only database connection error: %s", e)
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
@@ -507,19 +515,23 @@ def get_health():
     """Evaluates operational health reusing check_health from scripts/healthcheck.py."""
     db_path = get_db_path()
     if db_path.exists():
-        result = check_health(db_path=db_path, max_staleness_hours=26.0)
-        return {
-            "status": "ok" if result.is_healthy else "degraded",
-            "is_healthy": result.is_healthy,
-            "checked_at": result.checked_at,
-            "latest_collector_status": result.latest_collector_status,
-            "latest_collector_time": result.latest_collector_time,
-            "last_successful_collector_time": result.last_successful_collector_time,
-            "latest_heartbeat_date": result.latest_heartbeat_date,
-            "latest_heartbeat_ok": result.latest_heartbeat_ok,
-            "staleness_hours": result.staleness_hours,
-            "issues": result.issues,
-        }
+        try:
+            result = check_health(db_path=db_path, max_staleness_hours=26.0)
+            if result.is_healthy or not any("unable to open database file" in str(i) for i in result.issues):
+                return {
+                    "status": "ok" if result.is_healthy else "degraded",
+                    "is_healthy": result.is_healthy,
+                    "checked_at": result.checked_at,
+                    "latest_collector_status": result.latest_collector_status,
+                    "latest_collector_time": result.latest_collector_time,
+                    "last_successful_collector_time": result.last_successful_collector_time,
+                    "latest_heartbeat_date": result.latest_heartbeat_date,
+                    "latest_heartbeat_ok": result.latest_heartbeat_ok,
+                    "staleness_hours": result.staleness_hours,
+                    "issues": result.issues,
+                }
+        except Exception:
+            pass
 
     # Serverless fallback with snapshot
     return {
