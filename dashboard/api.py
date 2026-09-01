@@ -211,46 +211,50 @@ def get_readonly_connection(db_path: Path | None = None) -> Generator[sqlite3.Co
 @app.get("/stats/today", include_in_schema=False)
 def get_stats_today():
     """Returns today's (or latest recorded) funnel and threat detection statistics from daily_stats."""
-    with get_readonly_connection() as conn:
-        row = conn.execute(
-            """
-            SELECT date, domains_scanned, tahap1_passed, tahap2_passed, tahap3_assessed,
-                   domains_flagged, domains_live, flagged_not_in_blacklist,
-                   collector_ok, heartbeat_ok, peak_ram_mb
-            FROM daily_stats
-            ORDER BY date DESC
-            LIMIT 1
-            """
-        ).fetchone()
+    import traceback
+    try:
+        with get_readonly_connection() as conn:
+            row = conn.execute(
+                """
+                SELECT date, domains_scanned, tahap1_passed, tahap2_passed, tahap3_assessed,
+                       domains_flagged, domains_live, flagged_not_in_blacklist,
+                       collector_ok, heartbeat_ok, peak_ram_mb
+                FROM daily_stats
+                ORDER BY date DESC
+                LIMIT 1
+                """
+            ).fetchone()
 
-        if not row:
+            if not row:
+                return {
+                    "date": datetime.now(WIB).strftime("%Y-%m-%d"),
+                    "domains_scanned": 0,
+                    "tahap1_passed": 0,
+                    "tahap2_passed": 0,
+                    "tahap3_assessed": 0,
+                    "domains_flagged": 0,
+                    "domains_live": 0,
+                    "flagged_not_in_blacklist": 0,
+                    "collector_ok": False,
+                    "heartbeat_ok": False,
+                    "peak_ram_mb": 0,
+                }
+
             return {
-                "date": datetime.now(WIB).strftime("%Y-%m-%d"),
-                "domains_scanned": 0,
-                "tahap1_passed": 0,
-                "tahap2_passed": 0,
-                "tahap3_assessed": 0,
-                "domains_flagged": 0,
-                "domains_live": 0,
-                "flagged_not_in_blacklist": 0,
-                "collector_ok": False,
-                "heartbeat_ok": False,
-                "peak_ram_mb": 0,
+                "date": row["date"],
+                "domains_scanned": row["domains_scanned"] or 0,
+                "tahap1_passed": row["tahap1_passed"] or 0,
+                "tahap2_passed": row["tahap2_passed"] or 0,
+                "tahap3_assessed": row["tahap3_assessed"] or 0,
+                "domains_flagged": row["domains_flagged"] or 0,
+                "domains_live": row["domains_live"] or 0,
+                "flagged_not_in_blacklist": row["flagged_not_in_blacklist"] or 0,
+                "collector_ok": bool(row["collector_ok"]),
+                "heartbeat_ok": bool(row["heartbeat_ok"]),
+                "peak_ram_mb": row["peak_ram_mb"] or 0,
             }
-
-        return {
-            "date": row["date"],
-            "domains_scanned": row["domains_scanned"] or 0,
-            "tahap1_passed": row["tahap1_passed"] or 0,
-            "tahap2_passed": row["tahap2_passed"] or 0,
-            "tahap3_assessed": row["tahap3_assessed"] or 0,
-            "domains_flagged": row["domains_flagged"] or 0,
-            "domains_live": row["domains_live"] or 0,
-            "flagged_not_in_blacklist": row["flagged_not_in_blacklist"] or 0,
-            "collector_ok": bool(row["collector_ok"]),
-            "heartbeat_ok": bool(row["heartbeat_ok"]),
-            "peak_ram_mb": row["peak_ram_mb"] or 0,
-        }
+    except Exception as err:
+        return {"error": str(err), "trace": traceback.format_exc()}
 
 
 @app.get("/api/stats/trend", summary="Fetch daily trend series for dashboard charts")
