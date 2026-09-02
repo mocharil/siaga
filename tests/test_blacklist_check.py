@@ -25,8 +25,9 @@ def temp_db(tmp_path):
     return db_file
 
 
-def test_blacklist_listed_domain_success(temp_db):
+def test_blacklist_listed_domain_success(temp_db, monkeypatch):
     """DoD: Known phishing/malware domain is recognized as LISTED."""
+    monkeypatch.setenv("URLHAUS_AUTH_KEY", "test-key-123")
     mock_response_data = {
         "query_status": "ok",
         "id": "123456",
@@ -49,8 +50,9 @@ def test_blacklist_listed_domain_success(temp_db):
         assert mock_urlopen.called
 
 
-def test_blacklist_not_listed_official_domain(temp_db):
+def test_blacklist_not_listed_official_domain(temp_db, monkeypatch):
     """DoD: Official/clean domain is recognized as NOT_LISTED."""
+    monkeypatch.setenv("URLHAUS_AUTH_KEY", "test-key-123")
     mock_response_data = {
         "query_status": "no_results",
     }
@@ -66,8 +68,10 @@ def test_blacklist_not_listed_official_domain(temp_db):
         assert "Clean" in result.details
 
 
-def test_blacklist_offline_or_network_error_returns_unknown(temp_db):
+def test_blacklist_offline_or_network_error_returns_unknown(temp_db, monkeypatch):
     """DoD: Network errors or offline mode return UNKNOWN without crashing and without returning NOT_LISTED."""
+    monkeypatch.setenv("URLHAUS_AUTH_KEY", "test-key-123")
+
     # 1. With allow_network=False
     result_offline = is_listed("test-domain.xyz", db_path=temp_db, allow_network=False)
     assert result_offline.status == BlacklistStatus.UNKNOWN
@@ -81,8 +85,38 @@ def test_blacklist_offline_or_network_error_returns_unknown(temp_db):
         assert "network_error" in result_error.source or "error" in result_error.source
 
 
-def test_blacklist_sqlite_caching_hit(temp_db):
+def test_blacklist_no_auth_key_skips_network_call(temp_db, monkeypatch):
+    """Regression (2026-09-02): abuse.ch made Auth-Key mandatory -- every
+    URLhaus request without it 401s. Without a key configured, is_listed()
+    must report UNKNOWN honestly ("tidak dapat diperiksa") without ever
+    attempting the doomed request, so 100s of domains don't each log a
+    401 warning."""
+    monkeypatch.delenv("URLHAUS_AUTH_KEY", raising=False)
+
+    with patch("urllib.request.urlopen") as mock_urlopen:
+        result = is_listed("no-key-configured.xyz", db_path=temp_db)
+        assert result.status == BlacklistStatus.UNKNOWN
+        assert result.source == "no_auth_key"
+        assert "auth.abuse.ch" in result.details
+        assert not mock_urlopen.called
+
+
+def test_blacklist_invalid_auth_key_reported_distinctly(temp_db, monkeypatch):
+    """A configured-but-rejected key (401 despite sending Auth-Key) must be
+    distinguishable from "no key configured" or a generic network error --
+    otherwise a typo'd key looks identical to abuse.ch being down."""
+    monkeypatch.setenv("URLHAUS_AUTH_KEY", "wrong-or-expired-key")
+
+    err = urllib.error.HTTPError(url="x", code=401, msg="Unauthorized", hdrs=None, fp=None)
+    with patch("urllib.request.urlopen", side_effect=err):
+        result = is_listed("some-domain.xyz", db_path=temp_db)
+        assert result.status == BlacklistStatus.UNKNOWN
+        assert result.source == "invalid_auth_key"
+
+
+def test_blacklist_sqlite_caching_hit(temp_db, monkeypatch):
     """DoD: Repeated queries hit local SQLite cache and avoid redundant network round-trips."""
+    monkeypatch.setenv("URLHAUS_AUTH_KEY", "test-key-123")
     mock_response_data = {"query_status": "ok", "urls": [{"url": "http://cached-phish.xyz"}]}
     mock_resp = MagicMock()
     mock_resp.read.return_value = json.dumps(mock_response_data).encode("utf-8")
@@ -100,8 +134,9 @@ def test_blacklist_sqlite_caching_hit(temp_db):
         assert mock_urlopen.call_count == 1  # Still 1, no second call
 
 
-def test_blacklist_read_only_and_privacy_payload(temp_db):
+def test_blacklist_read_only_and_privacy_payload(temp_db, monkeypatch):
     """Verify that only the domain is transmitted and no sensitive user data is exposed."""
+    monkeypatch.setenv("URLHAUS_AUTH_KEY", "test-key-123")
     mock_resp = MagicMock()
     mock_resp.read.return_value = json.dumps({"query_status": "no_results"}).encode("utf-8")
     mock_resp.__enter__.return_value = mock_resp
@@ -112,3 +147,4 @@ def test_blacklist_read_only_and_privacy_payload(temp_db):
         # Verify request body contains only host=target-domain.com
         assert called_req.data == b"host=target-domain.com"
         assert called_req.get_method() == "POST"
+        assert called_req.get_header("Auth-key") == "test-key-123"

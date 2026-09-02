@@ -16,6 +16,7 @@ from datetime import datetime, timezone, timedelta
 from enum import Enum
 import json
 import logging
+import os
 from pathlib import Path
 import sqlite3
 import urllib.error
@@ -27,6 +28,13 @@ logger = logging.getLogger("siaga.blacklist")
 DEFAULT_DB_PATH = Path(__file__).resolve().parent.parent / "data" / "siaga.db"
 URLHAUS_HOST_API = "https://urlhaus-api.abuse.ch/v1/host/"
 REQUEST_TIMEOUT_SEC = 3.0
+
+# abuse.ch made Auth-Key mandatory for all URLhaus API access some time after
+# this module was first written (confirmed 2026-09-02: every request, even
+# the most basic host lookup, now returns 401 without it). Free key at
+# https://auth.abuse.ch/ -- read from env rather than hardcoded so this
+# module keeps working the moment a key is added to .env, with no code change.
+URLHAUS_AUTH_KEY_ENV = "URLHAUS_AUTH_KEY"
 
 CACHE_TTL_LISTED_HOURS = 12
 CACHE_TTL_NOT_LISTED_HOURS = 6
@@ -152,6 +160,23 @@ def is_listed(
             details="Network check disabled or offline",
         )
 
+    auth_key = os.environ.get(URLHAUS_AUTH_KEY_ENV)
+    if not auth_key:
+        # Don't attempt a request we already know will 401 for every domain --
+        # that just floods logs with one warning per domain checked. Report
+        # honestly as "tidak dapat diperiksa" instead (same principle CLAUDE.md
+        # applies to a site refusing HEAD).
+        return BlacklistResult(
+            domain=clean_domain,
+            status=BlacklistStatus.UNKNOWN,
+            source="no_auth_key",
+            checked_at=now_iso,
+            details=(
+                f"URLHAUS_AUTH_KEY belum diset di .env -- URLhaus mewajibkan Auth-Key "
+                f"sejak API mereka berubah. Daftar gratis di https://auth.abuse.ch/"
+            ),
+        )
+
     # Query URLhaus Host API via POST (standard read-only API method for URLhaus)
     try:
         req_data = urllib.parse.urlencode({"host": clean_domain}).encode("utf-8")
@@ -161,6 +186,7 @@ def is_listed(
             headers={
                 "User-Agent": "SIAGA-AI-Phishing-Detector/1.0 (HackFest2026; ReadOnlyCheck)",
                 "Content-Type": "application/x-www-form-urlencoded",
+                "Auth-Key": auth_key,
             },
             method="POST",
         )
@@ -200,7 +226,28 @@ def is_listed(
             _save_cached_status(res, resolved_db)
             return res
 
-    except (urllib.error.URLError, urllib.error.HTTPError, TimeoutError, OSError) as e:
+    except urllib.error.HTTPError as e:
+        if e.code == 401:
+            logger.warning(
+                "URLHAUS_AUTH_KEY rejected (401) for %s -- key present but invalid/expired.",
+                clean_domain,
+            )
+            return BlacklistResult(
+                domain=clean_domain,
+                status=BlacklistStatus.UNKNOWN,
+                source="invalid_auth_key",
+                checked_at=now_iso,
+                details="URLhaus menolak Auth-Key (401) -- cek apakah key masih valid di https://auth.abuse.ch/",
+            )
+        logger.warning("Blacklist check failed for domain %s: %s", clean_domain, e)
+        return BlacklistResult(
+            domain=clean_domain,
+            status=BlacklistStatus.UNKNOWN,
+            source="network_error",
+            checked_at=now_iso,
+            details=f"Network query error: {e}",
+        )
+    except (urllib.error.URLError, TimeoutError, OSError) as e:
         logger.warning("Blacklist check failed for domain %s: %s", clean_domain, e)
         # MUST return UNKNOWN on network failure; NEVER crash, NEVER assume not_listed
         return BlacklistResult(
