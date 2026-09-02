@@ -163,30 +163,7 @@ def test_healthcheck_cli_alert_dispatch(sample_db, monkeypatch):
         assert "[SIAGA HEALTH ALERT]" in mock_send.call_args[1]["text"]
 
 
-def test_healthcheck_daily_stats_staleness_wib_timezone(tmp_path):
-    """Verify that daily_stats staleness evaluates from 07:00 WIB (00:00 UTC), not 07:00 UTC.
-
-    Why this test is crucial (Lessons from T06 & T26 incident):
-    The daily brief cron is scheduled at 07:00 WIB (00:00 UTC). If healthcheck parses
-    the daily_stats date as 07:00 UTC (which is 14:00 WIB), the timestamp is falsely
-    shifted 7 hours into the future, stretching the 26-hour staleness threshold to 33 hours.
-    
-    This test verifies that at 27 hours after 07:00 WIB (i.e. next day 10:00 WIB),
-    the system correctly flags daily_stats as stale (> 26 hours), preventing silent
-    healthcheck delays.
-    """
-    from zoneinfo import ZoneInfo
-    db_file = tmp_path / "test_health_wib.db"
-    init_db(db_file)
-
-    WIB = ZoneInfo("Asia/Jakarta")
-    # Date in database: 2026-08-28 (completed 2026-08-28 07:00 WIB)
-    stat_date = "2026-08-28"
-
-    # Current time for test: 2026-08-29 10:00 WIB (27 hours after 2026-08-28 07:00 WIB)
-    now_27h_wib = datetime(2026, 8, 29, 10, 0, 0, tzinfo=WIB)
-    collector_run_time = (now_27h_wib - timedelta(hours=2)).isoformat()
-
+def _insert_daily_stats_fixture(db_file, stat_date: str, collector_run_time: str) -> None:
     with sqlite3.connect(str(db_file)) as conn:
         conn.execute(
             """
@@ -204,14 +181,52 @@ def test_healthcheck_daily_stats_staleness_wib_timezone(tmp_path):
         )
         conn.commit()
 
-    # 27 hours elapsed from 07:00 WIB must trigger stale alert (threshold = 26h)
-    result = check_health(db_path=db_file, max_staleness_hours=26.0, now=now_27h_wib)
+
+def test_healthcheck_daily_stats_date_is_utc_not_wib(tmp_path):
+    """Verify daily_stats.date is interpreted as a UTC calendar day, not WIB.
+
+    Corrected understanding (2026-09-02, supersedes the original T06/T26 fix):
+    daily_stats.date comes from scripts/run_daily_cycle.py's --date default,
+    which is intentionally UTC (it must match ct_raw.first_seen's UTC
+    labeling, or the pipeline would scan zero domains every day -- see that
+    script's comment). The 06:45 WIB cron therefore completes near the END
+    of that UTC calendar day (~23:45 UTC), not at "07:00 WIB of that date"
+    as an earlier version of this check assumed. That earlier assumption
+    overstated staleness by ~24h on every single check, which would have
+    triggered a false-positive Telegram health alert daily.
+
+    stat_date '2026-08-28' really means "completed around 2026-08-28T23:45Z"
+    (= 2026-08-29 06:45 WIB). This test locks in that anchor.
+    """
+    db_file = tmp_path / "test_health_utc_anchor.db"
+    init_db(db_file)
+    stat_date = "2026-08-28"
+    true_anchor_utc = datetime(2026, 8, 28, 23, 45, 0, tzinfo=timezone.utc)
+    collector_run_time = (true_anchor_utc - timedelta(minutes=15)).isoformat()
+    _insert_daily_stats_fixture(db_file, stat_date, collector_run_time)
+
+    # Only 3 hours after the true anchor -- must NOT be flagged stale.
+    # (Under the old, incorrect "07:00 WIB of stat_date" assumption this
+    # instant would have been miscomputed as ~27 hours stale.)
+    fresh_now = true_anchor_utc + timedelta(hours=3)
+    result = check_health(db_path=db_file, max_staleness_hours=26.0, now=fresh_now)
+    assert result.is_healthy is True
+    assert not any("daily_stats terakhir sudah usang" in issue for issue in result.issues)
+
+
+def test_healthcheck_daily_stats_staleness_from_correct_utc_anchor(tmp_path):
+    """27 hours past the TRUE completion time (23:45 UTC of stat_date) must
+    still trigger the stale alert -- the fix must not make staleness
+    detection blind, only correct its anchor point."""
+    db_file = tmp_path / "test_health_utc_anchor_stale.db"
+    init_db(db_file)
+    stat_date = "2026-08-28"
+    true_anchor_utc = datetime(2026, 8, 28, 23, 45, 0, tzinfo=timezone.utc)
+    collector_run_time = (true_anchor_utc - timedelta(minutes=15)).isoformat()
+    _insert_daily_stats_fixture(db_file, stat_date, collector_run_time)
+
+    stale_now = true_anchor_utc + timedelta(hours=27)
+    result = check_health(db_path=db_file, max_staleness_hours=26.0, now=stale_now)
     assert result.is_healthy is False
     assert any("daily_stats terakhir sudah usang" in issue for issue in result.issues)
     assert any("27.0 jam" in issue for issue in result.issues)
-
-    # Conversely, at 25 hours after 07:00 WIB (next day 08:00 WIB), it must be healthy
-    now_25h_wib = datetime(2026, 8, 29, 8, 0, 0, tzinfo=WIB)
-    result_fresh = check_health(db_path=db_file, max_staleness_hours=26.0, now=now_25h_wib)
-    assert result_fresh.is_healthy is True
-    assert len(result_fresh.issues) == 0

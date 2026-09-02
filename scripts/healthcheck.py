@@ -22,7 +22,6 @@ from pathlib import Path
 import sqlite3
 import sys
 import time
-from zoneinfo import ZoneInfo
 
 # Ensure UTF-8 output on Windows
 if sys.platform == "win32":
@@ -50,7 +49,6 @@ logger = logging.getLogger("siaga.healthcheck")
 
 DEFAULT_DB_PATH = BASE_DIR / "data" / "siaga.db"
 DEFAULT_MAX_STALENESS_HOURS = 26.0
-WIB = ZoneInfo("Asia/Jakarta")
 
 
 @dataclass
@@ -222,12 +220,20 @@ def check_health(
 
             # Check if latest daily_stats date is stale (> 26 hours ago)
             try:
-                # Interpret daily stat as being completed by 07:00 WIB (00:00 UTC) of that date
+                # stat_date is a UTC calendar day, not a WIB one: it comes from
+                # scripts/run_daily_cycle.py's --date default, which is
+                # intentionally datetime.now(timezone.utc) so it matches how
+                # ct_raw.first_seen is date-stamped (see that script's comment
+                # and devlog 2026-09-02). The 06:45 WIB cron therefore completes
+                # near the END of stat_date in UTC (~23:45 UTC), not at
+                # "07:00 WIB of stat_date" as this code previously assumed --
+                # that assumption overstated staleness by ~24h on every single
+                # day's check. Anchor at the real completion time instead.
                 stat_dt = datetime.strptime(stat_date, "%Y-%m-%d").replace(
-                    hour=7, minute=0, second=0, tzinfo=WIB
+                    hour=23, minute=45, second=0, tzinfo=timezone.utc
                 )
-                now_wib = now_dt.astimezone(WIB) if now_dt.tzinfo else now_dt.replace(tzinfo=timezone.utc).astimezone(WIB)
-                elapsed_hb_hours = (now_wib - stat_dt).total_seconds() / 3600.0
+                now_utc = now_dt.astimezone(timezone.utc) if now_dt.tzinfo else now_dt.replace(tzinfo=timezone.utc)
+                elapsed_hb_hours = (now_utc - stat_dt).total_seconds() / 3600.0
                 if elapsed_hb_hours > max_staleness_hours:
                     result.is_healthy = False
                     result.issues.append(

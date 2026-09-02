@@ -56,6 +56,15 @@ def _mark_heartbeat_ok(db_path: Path, target_date: str, ok: bool) -> None:
 
 def main() -> None:
     parser = argparse.ArgumentParser(description="SIAGA Daily Cycle Orchestrator (T24/T25)")
+    # Intentionally UTC, not WIB: lib/pipeline.py's Tahap 0 selects ct_raw rows
+    # by substr(first_seen, 1, 10) == target_date, and first_seen is stored as
+    # a UTC ISO timestamp. A WIB-based default here would ask for "today" (WIB)
+    # while the 06:30 WIB collector run's rows are still date-stamped with
+    # yesterday's UTC date -- the query would return zero domains every single
+    # day. This is why the resulting daily_stats.date label reads one calendar
+    # day "early" relative to WIB (see devlog 2026-09-02) -- a display/labeling
+    # quirk, not a data-completeness bug: every 24h window is still scanned in
+    # full, just filed under its UTC date rather than its WIB date.
     parser.add_argument("--date", type=str, default=datetime.now(timezone.utc).strftime("%Y-%m-%d"))
     parser.add_argument("--db-path", type=Path, default=BASE_DIR / "data" / "siaga.db")
     parser.add_argument("--watchlist", type=Path, default=BASE_DIR / "data" / "watchlist.csv")
