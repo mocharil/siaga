@@ -25,6 +25,11 @@ import urllib.parse
 import urllib.request
 
 import certifi
+from dotenv import load_dotenv
+
+# Self-contained like lib/llm.py: don't depend on some other module in the
+# import chain (e.g. lib.llm) having already loaded .env first.
+load_dotenv(Path(__file__).resolve().parent.parent / ".env")
 
 # Some hosts (confirmed for urlhaus-api.abuse.ch, 2026-09-02) fail Python's
 # default SSL verification on Windows with "unable to get local issuer
