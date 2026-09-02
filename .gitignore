@@ -1,12 +1,16 @@
 .env
 *.db
 *.db-journal
+*.db-wal
+*.db-shm
 data/raw/
 eval_errors_*.json
+data/smoke_eval.json
 __pycache__/
 *.log
 .venv/
 .collector.lock
+data/.collector_b.lock
 scratch/
 
 .vercel
