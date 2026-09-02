@@ -1,6 +1,6 @@
 {
   "summary": {
-    "timestamp": "2026-09-01T23:24:47.352331+00:00",
+    "timestamp": "2026-09-02T06:47:59.811643+00:00",
     "total_samples": 2,
     "confusion_matrix": {
       "true_positives": 1,
@@ -16,10 +16,10 @@
       "false_positive_rate": 0.0
     },
     "latency_ms": {
-      "p50": 1.13,
-      "p95": 2.25,
+      "p50": 0.88,
+      "p95": 1.74,
       "min": 0.01,
-      "max": 2.25
+      "max": 1.74
     },
     "error_count": 0
   },
@@ -42,7 +42,7 @@
           "points": 98
         }
       ],
-      "latency_ms": 2.25,
+      "latency_ms": 1.74,
       "content": "bca-update-tarif.online"
     },
     {
