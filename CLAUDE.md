@@ -110,6 +110,11 @@ Python 3.11 · SQLite · OpenClaw · Telegram Bot · VPS 4 vCPU / 4 GB RAM / 20 
 
 Model: **utamakan model default yang disediakan panitia.** API sendiri hanya kalau default tidak sanggup menghasilkan JSON terstruktur yang stabil.
 
+**Keputusan model (T08 technical meeting, dikonfirmasi 2 September 2026):**
+- Model default: `9router/oc/hy3-free` — provider `9router` (`https://9router.jcamp.io/v1`), gratis (biaya $0 di semua sisi: input/output/cache), context window 200.000 token, maxTokens per respons 8.192.
+- Panitia **tidak menyebutkan angka kuota eksplisit** untuk model default ini di technical meeting — tidak didokumentasikan, kemungkinan best-effort di sisi provider.
+- Panitia **mengizinkan pakai API sendiri** secara eksplisit (dikonfirmasi lisan di technical meeting, bukan cuma asumsi) — proyek ini memakai `api.justwoker.icu` (model `claude-opus-5`) untuk `lib/llm.py`, terpisah dari model default OpenClaw di atas.
+
 ---
 
 ## Cara kerja yang saya harapkan
