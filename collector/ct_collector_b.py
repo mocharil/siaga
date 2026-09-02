@@ -30,6 +30,7 @@ from __future__ import annotations
 
 import logging
 import os
+import socket
 import sys
 import time
 from datetime import datetime, timezone
@@ -71,6 +72,16 @@ MIN_STEM_LEN = 4  # selaras dengan SHORT_NAME_MAX_LEN di lib/similarity.py
 RATE_LIMIT_BACKOFF_SECONDS = 30.0
 RATE_LIMIT_MAX_RETRIES = 2
 RATE_LIMIT_ABORT_THRESHOLD = 5  # 429 beruntun -> hentikan run, jangan dipaksa
+
+# Insiden 2026-09-02: laptop kehilangan jaringan ~2 jam di tengah run, dan
+# getaddrinfo Windows tidak selalu menghormati timeout urllib saat adapter
+# jaringan sedang reconnect -- proses jadi macet diam tanpa error maupun
+# progres selama >15 menit, harus di-kill manual. socket.setdefaulttimeout
+# adalah lapisan kedua (selain REQUEST_TIMEOUT_SECONDS per-request), dan
+# MAX_RUN_SECONDS adalah batas keras seluruh run supaya jaringan yang mati
+# berjam-jam menghasilkan status "partial" yang jujur, bukan proses yang
+# menggantung selamanya.
+MAX_RUN_SECONDS = 110 * 60  # 2688 kandidat @ 2s pacing butuh ~90 menit minimum kalau lancar
 
 CANDIDATE_TLDS = ["xyz", "top"]
 
@@ -168,13 +179,30 @@ def check_candidates(
     consecutive candidates end up rate-limited even after retries, the run
     stops early -- the server is telling us no, and grinding through the
     remaining candidates would just produce more failures without result.
+
+    Also enforces MAX_RUN_SECONDS as a wall-clock ceiling: the 2026-09-02
+    incident saw a multi-hour network outage make individual checks hang
+    well past REQUEST_TIMEOUT_SECONDS (Windows getaddrinfo does not always
+    honor urllib's timeout while an adapter is reconnecting), leaving the
+    whole run stuck with no progress and no error until killed manually.
+    Remaining candidates are simply left unchecked for this run -- exact-
+    domain lookup finds a historical cert whenever it's next checked, so
+    a partial pass today is not lost the way a missed Aliran A day is.
     """
     matches: list[tuple[str, str]] = []
     checked = 0
     errors = 0
     consecutive_rate_limited = 0
+    start_time = time.monotonic()
 
     for hostname in candidates:
+        if time.monotonic() - start_time > MAX_RUN_SECONDS:
+            logger.error(
+                "MAX_RUN_SECONDS (%ds) exceeded with %d/%d candidates left unchecked; "
+                "stopping instead of risking an indefinite hang.",
+                MAX_RUN_SECONDS, len(candidates) - checked - errors, len(candidates),
+            )
+            break
         for attempt in range(RATE_LIMIT_MAX_RETRIES + 1):
             try:
                 has_cert, not_before = _check_domain(hostname, api_key)
@@ -240,6 +268,11 @@ def main() -> None:
 
 def _run(log_path: Path) -> None:
     _prevent_sleep()
+    # Second timeout layer: urllib's per-request timeout doesn't reliably
+    # bound getaddrinfo() on Windows while a network adapter is
+    # reconnecting (see MAX_RUN_SECONDS docstring). This is process-global,
+    # set once here rather than per-request.
+    socket.setdefaulttimeout(REQUEST_TIMEOUT_SECONDS)
     try:
         db_path = Path(os.environ.get("SIAGA_DB_PATH", str(DB_PATH)))
         api_key = os.environ.get("CTLOGS_API_KEY") or None

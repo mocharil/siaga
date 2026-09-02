@@ -28,6 +28,7 @@ from collector.ct_collector_b import (
     check_candidates,
     generate_candidates,
 )
+import collector.ct_collector_b as ct_collector_b
 from collector.ct_collector import init_db
 
 
@@ -228,6 +229,25 @@ class TestCheckCandidates:
             matches, checked, errors = check_candidates(candidates)
         assert checked == 0
         assert errors == RATE_LIMIT_ABORT_THRESHOLD
+        assert matches == []
+
+    def test_wall_clock_ceiling_stops_a_hung_run(self, monkeypatch):
+        """Regression: 2026-09-02 -- a mid-run network outage made Windows
+        getaddrinfo hang past REQUEST_TIMEOUT_SECONDS, and the process sat
+        idle for >15 minutes until killed by hand. MAX_RUN_SECONDS must cut
+        the run short instead of relying on per-request timeouts alone.
+
+        time.monotonic() is faked to jump straight past the ceiling after
+        start_time is captured -- a real MAX_RUN_SECONDS=0 is too timing-
+        sensitive to trust in a mocked, sub-millisecond test loop."""
+        monkeypatch.setattr(ct_collector_b, "MAX_RUN_SECONDS", 100)
+        clock = iter([0.0, 1000.0, 1000.0, 1000.0, 1000.0])
+        with patch(
+            "collector.ct_collector_b._check_domain", return_value=(False, None)
+        ), patch("time.sleep"), patch("time.monotonic", side_effect=lambda: next(clock)):
+            matches, checked, errors = check_candidates(["a.xyz", "b.xyz", "c.xyz"])
+        assert checked == 0
+        assert errors == 0
         assert matches == []
 
 
