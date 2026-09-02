@@ -19,9 +19,20 @@ import logging
 import os
 from pathlib import Path
 import sqlite3
+import ssl
 import urllib.error
 import urllib.parse
 import urllib.request
+
+import certifi
+
+# Some hosts (confirmed for urlhaus-api.abuse.ch, 2026-09-02) fail Python's
+# default SSL verification on Windows with "unable to get local issuer
+# certificate" even though the certificate itself is valid -- the OS-provided
+# trust store urllib falls back to is incomplete for that chain. certifi
+# ships its own current CA bundle and resolves it without disabling
+# verification.
+_SSL_CONTEXT = ssl.create_default_context(cafile=certifi.where())
 
 logger = logging.getLogger("siaga.blacklist")
 
@@ -191,7 +202,7 @@ def is_listed(
             method="POST",
         )
 
-        with urllib.request.urlopen(req, timeout=timeout) as resp:
+        with urllib.request.urlopen(req, timeout=timeout, context=_SSL_CONTEXT) as resp:
             data = json.loads(resp.read().decode("utf-8"))
             query_status = data.get("query_status", "")
 
