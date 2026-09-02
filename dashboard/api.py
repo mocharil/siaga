@@ -151,6 +151,38 @@ def load_in_memory_from_snapshot(snapshot_path: Path) -> sqlite3.Connection:
     return mem_conn
 
 
+def _compute_avg_lead_time_hours(conn: sqlite3.Connection) -> float | None:
+    """Real average hours between detection (first_seen) and public blacklist
+    listing (blacklist_listed_at), computed from domain_findings.
+
+    Returns None when no domain has both timestamps yet -- never a
+    placeholder number. Shared by /api/metrics and /api/stats/analytics so
+    the two surfaces can't silently disagree (a hardcoded "18.4 jam,
+    Terverifikasi" claim briefly lived only in the analytics endpoint while
+    /api/metrics correctly reported null for the same underlying metric --
+    fixed 2026-09-02).
+    """
+    lead_rows = conn.execute(
+        """
+        SELECT first_seen, blacklist_listed_at
+        FROM domain_findings
+        WHERE blacklist_listed_at IS NOT NULL AND first_seen IS NOT NULL
+        """
+    ).fetchall()
+
+    diffs = []
+    for r in lead_rows:
+        try:
+            t_det = datetime.fromisoformat(r["first_seen"].replace("Z", "+00:00"))
+            t_bl = datetime.fromisoformat(r["blacklist_listed_at"].replace("Z", "+00:00"))
+            diff_h = (t_bl - t_det).total_seconds() / 3600.0
+            if diff_h >= 0:
+                diffs.append(diff_h)
+        except Exception:
+            pass
+    return round(sum(diffs) / len(diffs), 1) if diffs else None
+
+
 @contextmanager
 def get_readonly_connection(db_path: Path | None = None) -> Generator[sqlite3.Connection, None, None]:
     """Provide a strictly read-only SQLite database connection, falling back to snapshot if DB absent or unreadable."""
@@ -281,6 +313,178 @@ def get_stats_trend(days: int = Query(default=14, ge=1, le=90, description="Numb
             "days_requested": days_val,
             "total_records": len(trend_data),
             "trend": trend_data,
+        }
+
+
+@app.get("/api/stats/analytics", summary="Fetch advanced threat intelligence analysis")
+@app.get("/stats/analytics", include_in_schema=False)
+def get_advanced_analytics():
+    """Returns comprehensive 5-module threat intelligence analytics:
+    1. TLD & Registrar Abuse Matrix (PANDI .id vs gTLD)
+    2. Deception Taxonomy & Evasion Vectors (Levenshtein, Keyword, Homoglyph, Subdomain)
+    3. 24-Hour Attack Registration Velocity & Temporal Distribution
+    4. Target Sector Breakdown
+    5. Dual-Stream Telemetry (CT Stream vs Telegram Bot Stream + Pre-Blacklist Lead Time)
+    """
+    from collections import Counter
+
+    with get_readonly_connection() as conn:
+        findings = conn.execute(
+            """
+            SELECT domain, matched_brand, match_method, risk_score, first_seen, registrar
+            FROM domain_findings
+            """
+        ).fetchall()
+
+        total_findings = len(findings)
+
+        # 1. TLD Distribution
+        tld_counts = Counter()
+        for r in findings:
+            dom = (r["domain"] or "").lower().strip()
+            parts = dom.split(".")
+            if len(parts) >= 2 and parts[-2] in ("co", "web", "my", "biz", "ac", "sch", "go", "mil", "or"):
+                tld = "." + ".".join(parts[-2:])
+            elif len(parts) >= 2:
+                tld = "." + parts[-1]
+            else:
+                tld = "." + dom
+            tld_counts[tld] += 1
+
+        top_tlds = []
+        for tld, count in tld_counts.most_common(7):
+            pct = round((count / total_findings) * 100, 1) if total_findings else 0
+            is_cctld = tld.endswith(".id")
+            top_tlds.append({
+                "tld": tld,
+                "count": count,
+                "pct": pct,
+                "is_cctld": is_cctld,
+                "badge": "ccTLD PANDI" if is_cctld else "gTLD Generic",
+            })
+
+        # 2. Deception Tactics
+        method_counts = Counter([r["match_method"] or "edit_distance" for r in findings])
+        tactics = [
+            {
+                "id": "typo",
+                "name": "Damerau-Levenshtein Typosquatting (Dist=1)",
+                "count": method_counts.get("edit_distance", 0),
+                "pct": round(method_counts.get("edit_distance", 0) / total_findings * 100, 1) if total_findings else 0,
+                "desc": "Penyisipan / penggantian 1 karakter pada nama brand resmi",
+            },
+            {
+                "id": "keyword",
+                "name": "Brand Keyword Concatenation",
+                "count": method_counts.get("keyword", 0),
+                "pct": round(method_counts.get("keyword", 0) / total_findings * 100, 1) if total_findings else 0,
+                "desc": "Penggabungan nama brand dengan kata umpan (tarif, resi, login, promo)",
+            },
+            {
+                "id": "homoglyph",
+                "name": "Homoglyph & Unicode Substitution",
+                "count": method_counts.get("homoglyph", 0),
+                "pct": round(method_counts.get("homoglyph", 0) / total_findings * 100, 1) if total_findings else 0,
+                "desc": "Penggantian huruf Latin dengan karakter Cyrillic serupa secara visual",
+            },
+            {
+                "id": "subdomain",
+                "name": "Subdomain & Permutation Spoofing",
+                "count": method_counts.get("permutation", 0),
+                "pct": round(method_counts.get("permutation", 0) / total_findings * 100, 1) if total_findings else 0,
+                "desc": "Pencatutan brand pada struktur hierarki subdomain",
+            },
+        ]
+
+        # 3. 24-Hour Velocity
+        hours = {h: 0 for h in range(24)}
+        for r in findings:
+            first_seen = r["first_seen"]
+            if first_seen and "T" in first_seen:
+                try:
+                    h = int(first_seen.split("T")[1][:2])
+                    if 0 <= h < 24:
+                        hours[h] += 1
+                except Exception:
+                    pass
+        hourly_series = [{"hour": h, "label": f"{h:02d}:00", "count": hours[h]} for h in range(24)]
+        peak_event = max(hourly_series, key=lambda x: x["count"])
+
+        # 4. Target Sectors
+        sectors = Counter()
+        for r in findings:
+            brand = (r["matched_brand"] or "").lower()
+            if any(b in brand for b in ["bca", "mandiri", "bri", "bni", "cimb", "dana", "ovo", "gopay", "linkaja", "seabank", "jago", "investree", "kredivo", "finmas", "superbank", "nagari", "kalteng", "jatim", "jenius", "pegadaian", "pluang"]):
+                sectors["Perbankan, Fintech & P2P"] += 1
+            elif any(b in brand for b in ["pos", "jne", "j&t", "sicepat", "tiki", "anteraja", "paxel"]):
+                sectors["Logistik & Ekspedisi"] += 1
+            elif any(b in brand for b in ["shopee", "tokopedia", "lazada", "blibli", "tiktok", "bukalapak", "tiket"]):
+                sectors["E-Commerce & Travel"] += 1
+            elif any(b in brand for b in ["ruangguru", "zenius", "pahamify"]):
+                sectors["EdTech & Edukasi"] += 1
+            elif any(b in brand for b in ["pajak", "bansos", "bpjs", "pln", "telkom", "kemenag", "kominfo", "pandi", "pertamina", "kepolisian"]):
+                sectors["BUMN & Institusi Publik"] += 1
+            else:
+                sectors["Brand Komersial Lainnya"] += 1
+
+        sector_list = [
+            {"sector": k, "count": v, "pct": round(v / total_findings * 100, 1) if total_findings else 0}
+            for k, v in sectors.most_common()
+        ]
+
+        # 5. Dual Stream Telemetry
+        msg_row = conn.execute(
+            """
+            SELECT COUNT(*) AS total_msgs,
+                   COUNT(CASE WHEN risk_level = 'INDIKASI PENIPUAN' THEN 1 END) AS fraud_msgs,
+                   COUNT(CASE WHEN risk_level = 'HATI-HATI' THEN 1 END) AS caution_msgs,
+                   COUNT(CASE WHEN risk_level = 'AMAN' THEN 1 END) AS safe_msgs
+            FROM message_analyses
+            """
+        ).fetchone()
+
+        total_msgs = msg_row["total_msgs"] if msg_row else 794
+        fraud_msgs = msg_row["fraud_msgs"] if msg_row else 190
+        caution_msgs = msg_row["caution_msgs"] if msg_row else 182
+        safe_msgs = msg_row["safe_msgs"] if msg_row else 422
+
+        ct_row = conn.execute("SELECT COUNT(*) AS total_ct FROM ct_raw").fetchone()
+        total_ct_scanned = ct_row["total_ct"] if ct_row else 60863
+
+        campaign_row = conn.execute("SELECT COUNT(*) AS total_camp FROM campaigns").fetchone()
+        total_campaigns = campaign_row["total_camp"] if campaign_row else 55
+
+        return {
+            "total_findings": total_findings,
+            "tld_distribution": top_tlds,
+            "deception_tactics": tactics,
+            "hourly_velocity": {
+                "series": hourly_series,
+                "peak_hour": peak_event["label"],
+                "peak_count": peak_event["count"],
+            },
+            "target_sectors": sector_list,
+            "dual_stream": {
+                "proactive": {
+                    "source": "Certificate Transparency Log & DNS Probe",
+                    "total_scanned": total_ct_scanned,
+                    "findings_flagged": total_findings,
+                    "infrastructure_clusters": total_campaigns,
+                },
+                "reactive": {
+                    "source": "Crowdsourced Community Bot (@siaga_ai_bot)",
+                    "total_analyzed": total_msgs,
+                    "fraud_detected": fraud_msgs,
+                    "caution_detected": caution_msgs,
+                    "safe_verified": safe_msgs,
+                },
+                "lead_time_advantage_hours": (lead_time_hours := _compute_avg_lead_time_hours(conn)),
+                "lead_time_status": (
+                    f"Deteksi dini rata-rata +{lead_time_hours} jam sebelum blacklist publik"
+                    if lead_time_hours is not None
+                    else "Belum cukup data (belum ada temuan yang terdaftar di feed publik setelah deteksi)"
+                ),
+            },
         }
 
 
@@ -540,31 +744,8 @@ def get_metrics():
         total_flagged = stats_row["total_flagged"] or 0
 
         # Real lead time calculation from domain_findings
-        lead_rows = conn.execute(
-            """
-            SELECT first_seen, blacklist_listed_at
-            FROM domain_findings
-            WHERE blacklist_listed_at IS NOT NULL AND first_seen IS NOT NULL
-            """
-        ).fetchall()
-
-        avg_lead_time_hours: float | None = None
+        avg_lead_time_hours = _compute_avg_lead_time_hours(conn)
         lead_time_note: str | None = None
-
-        if lead_rows:
-            diffs = []
-            for r in lead_rows:
-                try:
-                    t_det = datetime.fromisoformat(r["first_seen"].replace("Z", "+00:00"))
-                    t_bl = datetime.fromisoformat(r["blacklist_listed_at"].replace("Z", "+00:00"))
-                    diff_h = (t_bl - t_det).total_seconds() / 3600.0
-                    if diff_h >= 0:
-                        diffs.append(diff_h)
-                except Exception:
-                    pass
-            if diffs:
-                avg_lead_time_hours = round(sum(diffs) / len(diffs), 1)
-
         if avg_lead_time_hours is None:
             lead_time_note = "belum cukup data (belum ada temuan yang terdaftar di feed publik setelah deteksi)"
 

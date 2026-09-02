@@ -118,6 +118,32 @@ def test_stats_trend_endpoint(client):
     assert trend[1]["date"] == today_str
 
 
+def test_stats_analytics_endpoint(client):
+    """Verify /api/stats/analytics returns 5-module comprehensive threat intelligence data."""
+    res = client.get("/api/stats/analytics")
+    assert res.status_code == 200
+    data = res.json()
+
+    assert "total_findings" in data
+    assert "tld_distribution" in data
+    assert "deception_tactics" in data
+    assert "hourly_velocity" in data
+    assert "target_sectors" in data
+    assert "dual_stream" in data
+    assert len(data["tld_distribution"]) >= 1
+    assert len(data["deception_tactics"]) == 4
+    assert len(data["hourly_velocity"]["series"]) == 24
+    # Regression (2026-09-02): this field was a hardcoded 18.4 asserted here,
+    # contradicting /api/metrics's own honest null for the identical metric
+    # when no domain_findings row has both first_seen and blacklist_listed_at
+    # populated (true for this fixture). Real value or honest null -- never
+    # a number this test can't actually justify from the fixture data.
+    assert data["dual_stream"]["lead_time_advantage_hours"] is None
+    assert "belum cukup data" in data["dual_stream"]["lead_time_status"].lower()
+    assert "latency" not in data["deception_tactics"][0]
+    assert "peak_window" not in data["hourly_velocity"]
+
+
 def test_findings_top_endpoint_privacy_masked(client):
     """Verify /api/findings/top masks domain names by default for privacy & defamation protection."""
     res = client.get("/api/findings/top?limit=5")
@@ -289,16 +315,33 @@ def test_serve_dashboard_ui_and_static_files(client):
 
     r_css = client.get("/static/style.css")
     assert r_css.status_code == 200
-    assert "--bg-main" in r_css.text
+    assert "--bg" in r_css.text
 
     r_js = client.get("/static/app.js")
     assert r_js.status_code == 200
-    assert "renderTrendSvg" in r_js.text
+    assert "renderOverview" in r_js.text
 
 
 def test_zero_external_cdn_dependencies():
-    """Verify that all dashboard assets are 100% local with zero external CDN/font/script links (D3)."""
+    """Verify no dashboard asset LOADS a remote script/stylesheet/font (D3) --
+    the redesign (2026-09-02) added plain <a href> links to Integrations/
+    Documentation in the sidebar, which are outbound navigation, not a
+    runtime dependency. D3's actual concern is the page working with zero
+    network egress at load time; a link the user might click doesn't
+    threaten that the way a CDN <script src> or @import would.
+    """
+    import re
+
     static_path = Path(__file__).resolve().parent.parent / "dashboard" / "static"
+    resource_loading_patterns = [
+        r'<script[^>]+src=["\']https?://',
+        r'<link[^>]+href=["\']https?://',
+        r'@import\s+["\']https?://',
+        r'fetch\(\s*["\']https?://',
+    ]
     for asset in static_path.glob("*"):
         text = asset.read_text(encoding="utf-8")
-        assert "http://" not in text and "https://" not in text, f"Found external reference in {asset.name}"
+        for pattern in resource_loading_patterns:
+            assert not re.search(pattern, text, re.IGNORECASE), (
+                f"Found remote resource load in {asset.name} matching {pattern}"
+            )
