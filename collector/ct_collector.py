@@ -512,7 +512,7 @@ def _run(log_path: Path) -> None:
     logger.info("=" * 60)
     logger.info("SIAGA CT Collector — starting")
     logger.info("Source: %s | DB: %s | Log: %s", source, db_path, log_path)
-    logger.info("Window: %s → %s", since.isoformat(), started_at.isoformat())
+    logger.info("Window: %s -> %s", since.isoformat(), started_at.isoformat())
     logger.info("=" * 60)
 
     conn = init_db(db_path)
