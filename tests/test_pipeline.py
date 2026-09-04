@@ -19,6 +19,7 @@ from lib.db import init_db
 from lib.llm import LLMBudgetExceeded
 from lib.pipeline import TieredCandidate, run_tiered_pipeline
 from lib.rdap import DomainInfo
+from lib.redirect import HopInfo, RedirectTrace
 
 
 @pytest.fixture
@@ -127,6 +128,57 @@ def test_tiered_pipeline_tahap2_drops_established_dead_domain(temp_pipeline_db):
         assert metrics.tahap1_passed >= 5
 
 
+def test_tiered_pipeline_persists_real_head_check_status_code(temp_pipeline_db):
+    """Tahap 2's real HTTP status code must be persisted, not just the is_live bool.
+
+    lib/redirect.py's trace() always computes a concrete status_code per hop --
+    this was previously reduced to a boolean and discarded, which meant a
+    finding could only ever say "live" or "not live", never the actual
+    "200 OK" / "302 Redirect" / "403 Forbidden" a SOC operator would want to
+    see (a real UI mockup requested exactly this and it must never be
+    fabricated -- only ever the real value redirect.py computed).
+    """
+    mock_trace = RedirectTrace(
+        start_url="http://bca-update-tarif.online",
+        final_url="http://bca-update-tarif.online",
+        hops=[HopInfo(url="http://bca-update-tarif.online", status_code=403)],
+        status="unreachable",
+    )
+    mock_rdap = DomainInfo(
+        domain="bca-update-tarif.online",
+        registration_date="2026-08-27T00:00:00Z",
+        registrar="Test Registrar",
+        nameservers=["ns1.test.com"],
+        status=["active"],
+    )
+    mock_blacklist = BlacklistResult(
+        domain="bca-update-tarif.online",
+        status=BlacklistStatus.NOT_LISTED,
+        source="test",
+        checked_at="2026-08-28T12:00:00Z",
+    )
+
+    with patch("lib.pipeline.trace", return_value=mock_trace), \
+         patch("lib.pipeline.lookup", return_value=mock_rdap), \
+         patch("lib.pipeline.is_listed", return_value=mock_blacklist):
+        run_tiered_pipeline(
+            target_date="2026-08-28",
+            db_path=temp_pipeline_db,
+            allow_network=True,
+            allow_llm=False,
+            dry_run=False,
+        )
+
+    with sqlite3.connect(str(temp_pipeline_db)) as conn:
+        row = conn.execute(
+            "SELECT is_live, last_status_code FROM domain_findings WHERE domain = 'bca-update-tarif.online'"
+        ).fetchone()
+
+    assert row is not None
+    assert row[1] == 403
+    assert row[0] == 0  # 403 >= 400 -> not live
+
+
 def test_tiered_pipeline_llm_budget_cap_handled(temp_pipeline_db):
     """Verify that hitting LLM token budget limit does not crash pipeline and increments metric.
 
@@ -175,6 +227,35 @@ def test_tiered_pipeline_empty_date(temp_pipeline_db):
     assert metrics.domains_scanned == 0
     assert metrics.tahap1_passed == 0
     assert metrics.domains_flagged == 0
+
+
+def test_tiered_pipeline_empty_date_still_writes_daily_stats_row(temp_pipeline_db):
+    """A UTC date with zero ct_raw rows must still get a daily_stats row
+    (all zeros), not a silently missing one.
+
+    Regression: run_tiered_pipeline returned early on domains_scanned == 0
+    before ever reaching the daily_stats write, so a real day with a
+    legitimate zero-domain UTC bucket (e.g. the WIB-scheduled collector's
+    timestamps almost entirely landing in the previous UTC day) left a gap.
+    /api/stats/today does "ORDER BY date DESC LIMIT 1", so a missing row
+    silently serves a stale prior day's numbers as if they were current --
+    this is exactly the class of bug this project's own daily_stats
+    comments (see the non-empty-findings case) already existed to prevent.
+    """
+    run_tiered_pipeline(
+        target_date="2025-01-01",
+        db_path=temp_pipeline_db,
+        dry_run=False,
+    )
+
+    with sqlite3.connect(str(temp_pipeline_db)) as conn:
+        row = conn.execute(
+            "SELECT domains_scanned, domains_flagged, tahap1_passed, tahap2_passed, tahap3_assessed "
+            "FROM daily_stats WHERE date = '2025-01-01'"
+        ).fetchone()
+
+    assert row is not None
+    assert row == (0, 0, 0, 0, 0)
 
 
 def test_tiered_pipeline_llm_call_actually_invoked_on_success(temp_pipeline_db):

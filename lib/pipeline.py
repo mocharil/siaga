@@ -88,6 +88,7 @@ class TieredCandidate:
     similarity_score: float = 0.0
     # Tahap 2 results
     is_live: bool = False
+    last_status_code: int | None = None
     domain_age_days: int | None = None
     registered_at: str | None = None
     registrar: str | None = None
@@ -183,6 +184,38 @@ def run_tiered_pipeline(
 
         if metrics.domains_scanned == 0:
             logger.warning("No ct_raw records found for date %s.", target_date)
+            # A day with zero domains under this UTC date bucket is a
+            # legitimate, informative result (e.g. the WIB-scheduled
+            # collector run's timestamps almost entirely landed in the
+            # previous UTC day) -- not writing daily_stats here would leave
+            # a silent gap, and /api/stats/today's "ORDER BY date DESC
+            # LIMIT 1" would then keep serving a stale prior day's numbers
+            # as if they were current. Same rationale as the "empty
+            # findings_to_save" case handled below, just triggered one
+            # stage earlier (Tahap 0 instead of Tahap 3).
+            if not dry_run:
+                with sqlite3.connect(str(resolved_db)) as conn:
+                    conn.execute(
+                        """
+                        INSERT INTO daily_stats (
+                            date, domains_scanned, domains_flagged, domains_live,
+                            flagged_not_in_blacklist, collector_ok, heartbeat_ok,
+                            peak_ram_mb, tahap1_passed, tahap2_passed, tahap3_assessed
+                        )
+                        VALUES (?, 0, 0, 0, 0, 1, 1, ?, 0, 0, 0)
+                        ON CONFLICT(date) DO UPDATE SET
+                            domains_scanned = excluded.domains_scanned,
+                            domains_flagged = excluded.domains_flagged,
+                            domains_live = excluded.domains_live,
+                            flagged_not_in_blacklist = excluded.flagged_not_in_blacklist,
+                            peak_ram_mb = excluded.peak_ram_mb,
+                            tahap1_passed = excluded.tahap1_passed,
+                            tahap2_passed = excluded.tahap2_passed,
+                            tahap3_assessed = excluded.tahap3_assessed
+                        """,
+                        (target_date, _get_peak_ram_mb()),
+                    )
+                    conn.commit()
             return metrics
 
         # ===================================================================
@@ -227,8 +260,10 @@ def run_tiered_pipeline(
             if allow_network:
                 try:
                     trace_res = trace(f"http://{clean_dom}", max_hops=1, timeout=1.5)
-                    if trace_res.hops and trace_res.hops[-1].status_code < 400:
-                        is_live = True
+                    if trace_res.hops:
+                        cand.last_status_code = trace_res.hops[-1].status_code
+                        if trace_res.hops[-1].status_code < 400:
+                            is_live = True
                 except Exception:
                     is_live = False
             cand.is_live = is_live
@@ -377,6 +412,7 @@ def run_tiered_pipeline(
                     cand.risk_score,
                     cand.risk_level,
                     1 if cand.is_live else 0,
+                    cand.last_status_code,
                     cand.reasoning,
                     1 if cand.in_blacklist else 0,
                     now_iso,
@@ -409,13 +445,14 @@ def run_tiered_pipeline(
                         INSERT INTO domain_findings (
                             domain, first_seen, registered_at, registrar, nameservers,
                             matched_brand, match_method, risk_score, risk_level,
-                            is_live, reasoning, in_public_blacklist_at_detection, blacklist_checked_at
+                            is_live, last_status_code, reasoning, in_public_blacklist_at_detection, blacklist_checked_at
                         )
-                        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                         ON CONFLICT(domain) DO UPDATE SET
                             risk_score = excluded.risk_score,
                             risk_level = excluded.risk_level,
                             is_live = excluded.is_live,
+                            last_status_code = excluded.last_status_code,
                             reasoning = excluded.reasoning
                         """,
                         findings_to_save,
