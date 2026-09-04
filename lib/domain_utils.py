@@ -16,6 +16,14 @@ from __future__ import annotations
 # reason to depend on the collector.
 ID_SECOND_LEVEL_TLDS = {"co.id", "go.id", "ac.id", "or.id", "web.id"}
 
+# Suffixes of officially-issued Indonesian institutional domains. Moved here
+# from lib/judol_detect.py (2026-09-03) so lib/porn_detect.py could reuse the
+# same "hijacked institution" concept without duplicating the literal — a
+# match under one of these suffixes means the domain itself is legitimate
+# government/education infrastructure that has had a harmful subdomain
+# planted on it, not merely a newly-registered lookalike.
+INSTITUTIONAL_ID_SUFFIXES: tuple[str, ...] = (".go.id", ".ac.id", ".sch.id", ".or.id", ".desa.id")
+
 
 def registrable_domain(hostname: str) -> str | None:
     """Extract the registrable (apex) domain from any hostname or FQDN.
@@ -52,3 +60,37 @@ def registrable_domain(hostname: str) -> str | None:
     if last_two in ID_SECOND_LEVEL_TLDS and len(labels) >= 3:
         return ".".join(labels[-3:])
     return last_two
+
+
+def extract_domain_labels(domain: str) -> list[str]:
+    """Split a domain into its individual labels plus hyphen sub-parts.
+
+    Moved from lib/similarity.py (2026-09-02) so lib/judol_detect.py could
+    reuse the exact same label-boundary logic instead of re-deriving it --
+    naive substring matching on the full hostname produces false positives
+    that this project already learned to avoid for brand matching (e.g. a
+    keyword like "bandar" substring-matches the real city name
+    "bandarlampungkota.go.id", but "bandar" is not one of its labels).
+
+    Examples:
+        "bca-promo.xyz"        -> ["bca-promo", "bca", "promo"]
+        "slot-gacor.selumakab.go.id" -> ["slot-gacor", "slot", "gacor", "selumakab"]
+        "bandarlampungkota.go.id"    -> ["bandarlampungkota"]  (no hyphen, one token)
+    """
+    clean = domain.strip().lower().rstrip(".")
+    tld_parts = clean.split(".")
+    if len(tld_parts) >= 3 and tld_parts[-2] in ["co", "web", "my", "or", "go", "ac", "biz"] and tld_parts[-1] == "id":
+        core_labels = tld_parts[:-2]
+    elif len(tld_parts) >= 2:
+        core_labels = tld_parts[:-1]
+    else:
+        core_labels = tld_parts
+
+    tokens: list[str] = []
+    for label in core_labels:
+        if label:
+            tokens.append(label)
+            if "-" in label:
+                subparts = [p for p in label.split("-") if p]
+                tokens.extend(subparts)
+    return tokens

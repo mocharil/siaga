@@ -63,6 +63,15 @@ def test_db(tmp_path):
             """,
             (now_iso, now_iso),
         )
+        # Judol findings
+        conn.execute(
+            """
+            INSERT INTO judol_findings (domain, first_seen, matched_keywords, is_hijacked_institution, institution_suffix, detected_at)
+            VALUES ('slot-gacor.selumakab.go.id', ?, 'gacor,slot', 1, 'go.id', ?),
+                   ('gacor200.web.id', ?, 'gacor', 0, NULL, ?)
+            """,
+            (now_iso, now_iso, now_iso, now_iso),
+        )
         conn.commit()
 
     return db_file
@@ -174,6 +183,44 @@ def test_findings_top_endpoint_unmask_param(client):
     top_finding = data["findings"][0]
     assert top_finding["domain"] == "bankbca-klik-update.top"
     assert top_finding["raw_domain"] == "bankbca-klik-update.top"
+
+
+def test_judol_endpoint_privacy_masked_and_ordering(client):
+    """Verify /api/judol masks domains by default and lists hijacked institutions first."""
+    res = client.get("/api/judol")
+    assert res.status_code == 200
+    data = res.json()
+
+    assert data["total_findings"] == 2
+    assert data["hijacked_institution_count"] == 1
+    findings = data["findings"]
+    assert len(findings) == 2
+
+    top = findings[0]
+    assert top["is_hijacked_institution"] is True
+    assert top["institution_suffix"] == "go.id"
+    assert top["matched_keywords"] == ["gacor", "slot"]
+    assert "***" in top["domain"]
+    assert top["raw_domain"] is None
+
+
+def test_judol_endpoint_unmask_param(client):
+    res = client.get("/api/judol?unmask=true")
+    assert res.status_code == 200
+    data = res.json()
+
+    top = data["findings"][0]
+    assert top["domain"] == "slot-gacor.selumakab.go.id"
+    assert top["raw_domain"] == "slot-gacor.selumakab.go.id"
+
+
+def test_findings_top_includes_last_status_code_field(client):
+    """last_status_code must be exposed (null when not yet checked, never fabricated)."""
+    res = client.get("/api/findings/top?limit=5")
+    assert res.status_code == 200
+    finding = res.json()["findings"][0]
+    assert "last_status_code" in finding
+    assert finding["last_status_code"] is None
 
 
 def test_metrics_endpoint_live_eval_data(client):
@@ -315,7 +362,7 @@ def test_serve_dashboard_ui_and_static_files(client):
 
     r_css = client.get("/static/style.css")
     assert r_css.status_code == 200
-    assert "--bg" in r_css.text
+    assert "--ios-blue" in r_css.text
 
     r_js = client.get("/static/app.js")
     assert r_js.status_code == 200
@@ -339,7 +386,10 @@ def test_zero_external_cdn_dependencies():
         r'@import\s+["\']https?://',
         r'fetch\(\s*["\']https?://',
     ]
+    text_extensions = {".html", ".css", ".js", ".json", ".svg"}
     for asset in static_path.glob("*"):
+        if asset.suffix.lower() not in text_extensions:
+            continue
         text = asset.read_text(encoding="utf-8")
         for pattern in resource_loading_patterns:
             assert not re.search(pattern, text, re.IGNORECASE), (

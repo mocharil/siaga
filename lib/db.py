@@ -8,6 +8,7 @@ from __future__ import annotations
 
 from datetime import datetime, timezone, timedelta
 import logging
+import os
 from pathlib import Path
 import sqlite3
 
@@ -20,7 +21,7 @@ DEFAULT_RETENTION_DAYS = 30
 def init_db(db_path: Path | str | None = None) -> None:
     """Initialize complete SIAGA SQLite database schema idempotently."""
     resolved_path = Path(db_path) if db_path else DEFAULT_DB_PATH
-    resolved_path.parent.mkdir(parents=True, exist_ok=True)
+    os.makedirs(str(resolved_path.parent), exist_ok=True)
 
     with sqlite3.connect(str(resolved_path)) as conn:
         conn.execute("PRAGMA journal_mode=WAL;")
@@ -98,6 +99,7 @@ def init_db(db_path: Path | str | None = None) -> None:
                 risk_score INTEGER,
                 risk_level TEXT,
                 is_live BOOLEAN DEFAULT 0,
+                last_status_code INTEGER,
                 reasoning TEXT,
                 reviewed_by_human BOOLEAN DEFAULT 0,
                 human_verdict TEXT,
@@ -113,6 +115,11 @@ def init_db(db_path: Path | str | None = None) -> None:
         if "campaign_id" not in df_cols:
             try:
                 conn.execute("ALTER TABLE domain_findings ADD COLUMN campaign_id INTEGER")
+            except Exception:
+                pass
+        if "last_status_code" not in df_cols:
+            try:
+                conn.execute("ALTER TABLE domain_findings ADD COLUMN last_status_code INTEGER")
             except Exception:
                 pass
 
@@ -135,6 +142,79 @@ def init_db(db_path: Path | str | None = None) -> None:
             )
             """
         )
+
+        # 3c. Judol (Online Gambling) Findings -- keyword/label matches against
+        # ct_raw, with a dedicated flag for the hijacked-government-domain
+        # pattern (see lib/judol_detect.py for the matching logic).
+        conn.execute(
+            """
+            CREATE TABLE IF NOT EXISTS judol_findings (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                domain TEXT NOT NULL UNIQUE,
+                first_seen TIMESTAMP NOT NULL,
+                matched_keywords TEXT NOT NULL,
+                is_hijacked_institution BOOLEAN DEFAULT 0,
+                institution_suffix TEXT,
+                detected_at TIMESTAMP NOT NULL,
+                verification_method TEXT DEFAULT 'keyword',
+                llm_reasoning TEXT
+            )
+            """
+        )
+        conn.execute(
+            "CREATE INDEX IF NOT EXISTS idx_judol_findings_first_seen ON judol_findings (first_seen);"
+        )
+        conn.execute(
+            "CREATE INDEX IF NOT EXISTS idx_judol_findings_hijacked ON judol_findings (is_hijacked_institution);"
+        )
+        cur = conn.execute("PRAGMA table_info(judol_findings)")
+        jf_cols = [row[1] for row in cur.fetchall()]
+        if "verification_method" not in jf_cols:
+            try:
+                conn.execute("ALTER TABLE judol_findings ADD COLUMN verification_method TEXT DEFAULT 'keyword'")
+            except Exception:
+                pass
+        if "llm_reasoning" not in jf_cols:
+            try:
+                conn.execute("ALTER TABLE judol_findings ADD COLUMN llm_reasoning TEXT")
+            except Exception:
+                pass
+
+        # 3d. Pornographic/Adult Content Findings -- same shape and rationale
+        # as judol_findings (see lib/porn_detect.py for the matching logic).
+        conn.execute(
+            """
+            CREATE TABLE IF NOT EXISTS porn_findings (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                domain TEXT NOT NULL UNIQUE,
+                first_seen TIMESTAMP NOT NULL,
+                matched_keywords TEXT NOT NULL,
+                is_hijacked_institution BOOLEAN DEFAULT 0,
+                institution_suffix TEXT,
+                detected_at TIMESTAMP NOT NULL,
+                verification_method TEXT DEFAULT 'keyword',
+                llm_reasoning TEXT
+            )
+            """
+        )
+        conn.execute(
+            "CREATE INDEX IF NOT EXISTS idx_porn_findings_first_seen ON porn_findings (first_seen);"
+        )
+        conn.execute(
+            "CREATE INDEX IF NOT EXISTS idx_porn_findings_hijacked ON porn_findings (is_hijacked_institution);"
+        )
+        cur = conn.execute("PRAGMA table_info(porn_findings)")
+        pf_cols = [row[1] for row in cur.fetchall()]
+        if "verification_method" not in pf_cols:
+            try:
+                conn.execute("ALTER TABLE porn_findings ADD COLUMN verification_method TEXT DEFAULT 'keyword'")
+            except Exception:
+                pass
+        if "llm_reasoning" not in pf_cols:
+            try:
+                conn.execute("ALTER TABLE porn_findings ADD COLUMN llm_reasoning TEXT")
+            except Exception:
+                pass
 
         # 4. Message Analyses (Mode A) - UU PDP Compliant: Hash only
         conn.execute(

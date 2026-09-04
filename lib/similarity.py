@@ -13,6 +13,7 @@ from pathlib import Path
 import re
 import urllib.parse
 
+from lib.domain_utils import extract_domain_labels as _extract_domain_labels
 from lib.homoglyph import decode_punycode, normalize as normalize_homoglyphs
 
 logger = logging.getLogger("siaga.similarity")
@@ -149,29 +150,6 @@ def load_watchlist(csv_path: Path | str | None = None) -> list[WatchlistEntry]:
         _WATCHLIST_CACHE = entries
         _OFFICIAL_DOMAINS_SET = off_set
     return entries
-
-
-def _extract_domain_labels(domain: str) -> list[str]:
-    """Extract individual domain labels, subdomains, and hyphenated parts."""
-    clean = domain.strip().lower().rstrip(".")
-    # Remove common TLD extensions (.co.id, .com, .xyz, etc.)
-    tld_parts = clean.split(".")
-    if len(tld_parts) >= 3 and tld_parts[-2] in ["co", "web", "my", "or", "go", "ac", "biz"] and tld_parts[-1] == "id":
-        core_labels = tld_parts[:-2]
-    elif len(tld_parts) >= 2:
-        core_labels = tld_parts[:-1]
-    else:
-        core_labels = tld_parts
-
-    tokens: list[str] = []
-    for label in core_labels:
-        if label:
-            tokens.append(label)
-            # Split hyphenated parts: e.g. bca-promo -> ['bca-promo', 'bca', 'promo']
-            if "-" in label:
-                subparts = [p for p in label.split("-") if p]
-                tokens.extend(subparts)
-    return tokens
 
 
 def find_similar(
