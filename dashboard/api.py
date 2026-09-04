@@ -13,6 +13,7 @@ from __future__ import annotations
 
 from contextlib import contextmanager
 from datetime import datetime, timezone
+import json
 import logging
 import os
 from pathlib import Path
@@ -36,7 +37,7 @@ from pydantic import BaseModel
 
 from scripts.healthcheck import check_health
 from lib.scoring import analyze_message
-from lib.report_draft import generate_report_draft
+from lib.report_draft import generate_report_draft, get_recommended_channels, format_report_text, ReportingChannel
 
 logging.basicConfig(
     level=logging.INFO,
@@ -71,8 +72,15 @@ app.add_middleware(
 
 
 @app.get("/", include_in_schema=False)
-def serve_dashboard_ui():
-    """Serve the static vanilla HTML dashboard."""
+@app.get("/overview", include_in_schema=False)
+@app.get("/radar", include_in_schema=False)
+@app.get("/triage", include_in_schema=False)
+@app.get("/architecture", include_in_schema=False)
+@app.get("/compliance", include_in_schema=False)
+@app.get("/evaluation", include_in_schema=False)
+@app.get("/documentation", include_in_schema=False)
+def serve_dashboard_ui(request: Request):
+    """Serve the static vanilla HTML dashboard for all SPA view paths."""
     index_path = STATIC_DIR / "index.html"
     if not index_path.exists():
         raise HTTPException(status_code=404, detail="Dashboard UI not found")
@@ -118,10 +126,16 @@ def get_db_path() -> Path:
     """Resolve database path from environment or default."""
     override = getattr(app.state, "db_path", None)
     if override:
-        return Path(override)
+        p = Path(override)
+        return p if p.is_absolute() else (BASE_DIR / p).resolve()
     env_path = os.environ.get("SIAGA_DB_PATH")
     if env_path:
-        return Path(env_path)
+        p = Path(env_path)
+        if p.is_absolute() and p.exists():
+            return p
+        if (BASE_DIR / p).exists():
+            return (BASE_DIR / p).resolve()
+        return p.resolve()
     return DEFAULT_DB_PATH
 
 
@@ -146,6 +160,12 @@ def load_in_memory_from_snapshot(snapshot_path: Path) -> sqlite3.Connection:
             mem_conn.execute(f'CREATE TABLE IF NOT EXISTS "{tbl}" ({cols_def})')
             for r in rows:
                 mem_conn.execute(f'INSERT INTO "{tbl}" VALUES ({placeholders})', list(r.values()))
+
+    # Ensure last_status_code column exists in domain_findings if missing in snapshot
+    try:
+        mem_conn.execute('ALTER TABLE domain_findings ADD COLUMN last_status_code INTEGER DEFAULT NULL')
+    except Exception:
+        pass
 
     mem_conn.commit()
     return mem_conn
@@ -396,17 +416,29 @@ def get_advanced_analytics():
             },
         ]
 
-        # 3. 24-Hour Velocity
-        hours = {h: 0 for h in range(24)}
+        # 3. 24-Hour Velocity -- scoped to the single most recent WIB calendar
+        # day with findings (not all-time), and bucketed by WIB hour since the
+        # UI labels this chart "UTC+07:00". Previously this summed every
+        # finding ever recorded regardless of date, so one day's worth of new
+        # findings barely moved the shape of the histogram and the chart
+        # looked frozen day to day.
+        parsed_seen = []
         for r in findings:
             first_seen = r["first_seen"]
-            if first_seen and "T" in first_seen:
-                try:
-                    h = int(first_seen.split("T")[1][:2])
-                    if 0 <= h < 24:
-                        hours[h] += 1
-                except Exception:
-                    pass
+            if not first_seen:
+                continue
+            try:
+                dt_wib = datetime.fromisoformat(first_seen).astimezone(WIB)
+                parsed_seen.append(dt_wib)
+            except Exception:
+                pass
+
+        hours = {h: 0 for h in range(24)}
+        if parsed_seen:
+            latest_wib_date = max(dt.date() for dt in parsed_seen)
+            for dt_wib in parsed_seen:
+                if dt_wib.date() == latest_wib_date:
+                    hours[dt_wib.hour] += 1
         hourly_series = [{"hour": h, "label": f"{h:02d}:00", "count": hours[h]} for h in range(24)]
         peak_event = max(hourly_series, key=lambda x: x["count"])
 
@@ -443,16 +475,19 @@ def get_advanced_analytics():
             """
         ).fetchone()
 
-        total_msgs = msg_row["total_msgs"] if msg_row else 794
-        fraud_msgs = msg_row["fraud_msgs"] if msg_row else 190
-        caution_msgs = msg_row["caution_msgs"] if msg_row else 182
-        safe_msgs = msg_row["safe_msgs"] if msg_row else 422
+        # COUNT(*) queries always return exactly one row (never None), so these
+        # `or 0` guards are for a NULL aggregate, not a missing row -- there is
+        # no real-data fallback here on purpose (see CLAUDE.md rule #2).
+        total_msgs = msg_row["total_msgs"] or 0
+        fraud_msgs = msg_row["fraud_msgs"] or 0
+        caution_msgs = msg_row["caution_msgs"] or 0
+        safe_msgs = msg_row["safe_msgs"] or 0
 
         ct_row = conn.execute("SELECT COUNT(*) AS total_ct FROM ct_raw").fetchone()
-        total_ct_scanned = ct_row["total_ct"] if ct_row else 60863
+        total_ct_scanned = ct_row["total_ct"] or 0
 
         campaign_row = conn.execute("SELECT COUNT(*) AS total_camp FROM campaigns").fetchone()
-        total_campaigns = campaign_row["total_camp"] if campaign_row else 55
+        total_campaigns = campaign_row["total_camp"] or 0
 
         return {
             "total_findings": total_findings,
@@ -491,18 +526,20 @@ def get_advanced_analytics():
 @app.get("/api/findings/top", summary="Fetch priority domain findings for today")
 @app.get("/findings/top", include_in_schema=False)
 def get_findings_top(
-    limit: int = Query(default=10, ge=1, le=100, description="Max priority findings to return"),
+    limit: int = Query(default=10, ge=1, le=500, description="Max priority findings to return"),
     unmask: bool = Query(default=False, description="Set True only if unmasked domain is explicitly requested"),
 ):
     """Returns highest risk domain findings with privacy masking applied by default."""
     limit_val = int(getattr(limit, "default", limit))
     unmask_val = bool(getattr(unmask, "default", unmask))
     with get_readonly_connection() as conn:
+        cols = {r[1] for r in conn.execute("PRAGMA table_info(domain_findings)").fetchall()}
+        status_col = "last_status_code," if "last_status_code" in cols else "NULL AS last_status_code,"
         rows = conn.execute(
-            """
+            f"""
             SELECT id, domain, first_seen, registered_at, registrar,
                    matched_brand, match_method, risk_score, risk_level,
-                   is_live, in_public_blacklist_at_detection, campaign_id,
+                   is_live, {status_col} in_public_blacklist_at_detection, campaign_id,
                    reasoning
             FROM domain_findings
             ORDER BY risk_score DESC, id DESC
@@ -516,6 +553,7 @@ def get_findings_top(
             raw_domain = r["domain"]
             findings.append({
                 "id": r["id"],
+                "category": "phishing",
                 "domain": raw_domain if unmask_val else mask_domain(raw_domain),
                 "domain_masked": mask_domain(raw_domain),
                 "raw_domain": raw_domain if unmask_val else None,
@@ -527,6 +565,7 @@ def get_findings_top(
                 "risk_score": r["risk_score"],
                 "risk_level": r["risk_level"],
                 "is_live": bool(r["is_live"]),
+                "last_status_code": r["last_status_code"],
                 "in_public_blacklist": bool(r["in_public_blacklist_at_detection"]),
                 "campaign_id": r["campaign_id"],
                 "reasoning": r["reasoning"],
@@ -572,6 +611,375 @@ def get_findings_brands():
         }
 
 
+@app.get("/api/judol", summary="Fetch judol (online gambling) domain findings")
+@app.get("/judol", include_in_schema=False)
+def get_judol_findings(
+    request: Request,
+    limit: int = Query(default=50, ge=1, le=500, description="Max findings to return"),
+    unmask: bool = Query(default=False, description="Set True only if unmasked domain is explicitly requested"),
+):
+    """Returns judol keyword-matched domains, with hijacked-institution findings first.
+
+    See lib/judol_detect.py for matching methodology and the deliberate
+    keyword-list precision trade-offs. Populated by scripts/run_judol_scan.py.
+    """
+    # If a web browser opens /judol, serve the dashboard HTML view
+    if request.url.path == "/judol" and "text/html" in request.headers.get("accept", ""):
+        index_path = STATIC_DIR / "index.html"
+        if index_path.exists():
+            return FileResponse(index_path)
+
+    limit_val = int(getattr(limit, "default", limit))
+    unmask_val = bool(getattr(unmask, "default", unmask))
+    with get_readonly_connection() as conn:
+        rows = conn.execute(
+            """
+            SELECT id, domain, first_seen, matched_keywords, is_hijacked_institution,
+                   institution_suffix, detected_at, verification_method, llm_reasoning
+            FROM judol_findings
+            ORDER BY is_hijacked_institution DESC, first_seen DESC
+            LIMIT ?
+            """,
+            (limit_val,),
+        ).fetchall()
+
+        findings = []
+        for r in rows:
+            raw_domain = r["domain"]
+            is_hijacked = bool(r["is_hijacked_institution"])
+            findings.append({
+                "id": r["id"],
+                "category": "judol",
+                "domain": raw_domain if unmask_val else mask_domain(raw_domain),
+                "domain_masked": mask_domain(raw_domain),
+                "raw_domain": raw_domain if unmask_val else None,
+                "first_seen": r["first_seen"],
+                "matched_keywords": r["matched_keywords"].split(",") if r["matched_keywords"] else [],
+                "is_hijacked_institution": is_hijacked,
+                "institution_suffix": r["institution_suffix"],
+                "detected_at": r["detected_at"],
+                "verification_method": r["verification_method"] or "keyword",
+                "llm_reasoning": r["llm_reasoning"],
+                # Fixed severity tier (keyword-match category, not the
+                # technical+linguistic score domain_findings computes) --
+                # matches lib/porn_detect.py / get_judol_detail's convention,
+                # kept here too so unified sorting/badges are consistent
+                # between the list and detail views.
+                "risk_score": 95 if is_hijacked else 85,
+                "risk_level": "INDIKASI PENIPUAN",
+                "is_live": False,
+                "last_status_code": None,
+                "in_public_blacklist": False,
+            })
+
+        total = conn.execute("SELECT COUNT(*) FROM judol_findings").fetchone()[0]
+        hijacked_total = conn.execute(
+            "SELECT COUNT(*) FROM judol_findings WHERE is_hijacked_institution = 1"
+        ).fetchone()[0]
+        earliest_detected = conn.execute("SELECT MIN(first_seen) FROM judol_findings").fetchone()[0]
+
+        return {
+            "total_findings": total,
+            "hijacked_institution_count": hijacked_total,
+            "earliest_first_seen": earliest_detected,
+            "limit": limit_val,
+            "findings": findings,
+        }
+
+
+@app.get("/api/judol/{judol_id}", summary="Fetch single judol finding detail with reporting draft")
+@app.get("/judol/{judol_id}", include_in_schema=False)
+def get_judol_detail(judol_id: int):
+    """Returns complete technical details and generated incident report draft for a judol finding."""
+    with get_readonly_connection() as conn:
+        row = conn.execute(
+            """
+            SELECT id, domain, first_seen, matched_keywords, is_hijacked_institution,
+                   institution_suffix, detected_at, verification_method, llm_reasoning
+            FROM judol_findings
+            WHERE id = ?
+            """,
+            (judol_id,),
+        ).fetchone()
+
+        if not row:
+            # Fallback to check porn_findings if finding_id exists there
+            return get_porn_detail(judol_id)
+
+        domain = row["domain"]
+        matched_kws = row["matched_keywords"].split(",") if row["matched_keywords"] else []
+        is_hijacked = bool(row["is_hijacked_institution"])
+        suffix = row["institution_suffix"] or ""
+        verification_method = row["verification_method"] or "keyword"
+
+        risk_score = 95 if is_hijacked else 85
+        risk_level = "INDIKASI PENIPUAN"
+        brand_name = f"Instansi Resmi (.{suffix})" if is_hijacked else "Konten Perjudian Online (Judol)"
+        method_name = f"Subdomain Hijack & Keyword ({', '.join(matched_kws)})" if is_hijacked else f"Keyword Match ({', '.join(matched_kws)})"
+        reasoning = (
+            f"Domain instansi resmi pemerintah/akademik (.{suffix}) disusupi subdomain perjudian online ilegal dengan kata kunci: {', '.join(matched_kws)}. Sangat mendesak untuk dilaporkan ke CSIRT dan di-take-down oleh pengelola domain."
+            if is_hijacked
+            else f"Domain terdeteksi menyebarkan dan mempromosikan situs perjudian online ilegal dengan kata kunci: {', '.join(matched_kws)}."
+        )
+        # Ambiguous keywords (toto/bola/domino/...) are only ever flagged
+        # after an LLM judgment call, not a deterministic rule -- the report
+        # must say so plainly rather than presenting it with the same
+        # confidence as an unambiguous keyword match.
+        if verification_method == "llm":
+            reasoning += (
+                f" [Verifikasi AI]: kata kunci ini ambigu di luar konteks judi, dan hanya ditandai "
+                f"setelah dinilai oleh model AI berdasarkan nama domain secara keseluruhan (bukan aturan pasti). "
+                f"Alasan model: {row['llm_reasoning'] or '-'}"
+            )
+
+        channels = get_recommended_channels(domain, brand_name)
+        if is_hijacked and not any("BSSN" in c.name for c in channels):
+            channels.append(
+                ReportingChannel(
+                    name="Direktorat Operasi Keamanan Siber BSSN (Gov-CSIRT)",
+                    target_type="Pusat Tanggap Insiden Siber Pemerintah",
+                    contact="bantuan70@bssn.go.id | Telp: (021) 78833610 | WA: 0812-8135-4598 (24/7)",
+                    submission_method="Email CSIRT BSSN (bantuan70@bssn.go.id) / Hotline Aduan Siber",
+                    notes=f"Notifikasi insiden peretasan / defacement subdomain instansi .{suffix} untuk penanganan darurat.",
+                )
+            )
+
+        # is_live=False here is honest, not merely a safe default: judol/porn
+        # findings come from a keyword scan of ct_raw, never a Tahap-2
+        # HEAD-check, so there is no real liveness data to report -- passing
+        # True previously baked a fabricated "AKTIF (Merespons HTTP)" claim
+        # into an official incident report draft sent to Kominfo/PANDI/BSSN.
+        draft_text = format_report_text(
+            finding_id=row["id"],
+            domain=domain,
+            brand=brand_name,
+            risk_score=risk_score,
+            risk_level=risk_level,
+            first_seen_iso=row["first_seen"],
+            is_live=False,
+            match_method=method_name,
+            registrar="PANDI (.ID Registry)" if domain.endswith(".id") else None,
+            nameservers=None,
+            reasoning=reasoning,
+            channels=channels,
+        )
+
+        return {
+            "id": row["id"],
+            "domain": domain,
+            "domain_masked": mask_domain(domain),
+            "raw_domain": domain,
+            "first_seen": row["first_seen"],
+            "matched_brand": brand_name,
+            "match_method": method_name,
+            "risk_score": risk_score,
+            "risk_level": risk_level,
+            "is_live": False,
+            "last_status_code": None,
+            "in_public_blacklist": False,
+            "campaign_id": None,
+            "reasoning": reasoning,
+            "matched_keywords": matched_kws,
+            "is_hijacked_institution": is_hijacked,
+            "institution_suffix": suffix,
+            "detected_at": row["detected_at"],
+            "verification_method": verification_method,
+            "llm_reasoning": row["llm_reasoning"],
+            "csirt_report_draft": draft_text,
+            "escalation_channels": [
+                {
+                    "name": c.name,
+                    "target_type": c.target_type,
+                    "contact": c.contact,
+                    "submission_method": c.submission_method,
+                    "notes": c.notes,
+                }
+                for c in channels
+            ],
+        }
+
+
+@app.get("/api/porn", summary="Fetch adult/pornographic content domain findings")
+@app.get("/porn", include_in_schema=False)
+def get_porn_findings(
+    request: Request,
+    limit: int = Query(default=50, ge=1, le=500, description="Max findings to return"),
+    unmask: bool = Query(default=False, description="Set True only if unmasked domain is explicitly requested"),
+):
+    """Returns adult-content keyword-matched domains, with hijacked-institution findings first.
+
+    See lib/porn_detect.py for matching methodology and the deliberate
+    keyword-list precision trade-offs. Populated by scripts/run_porn_scan.py.
+    """
+    if request.url.path == "/porn" and "text/html" in request.headers.get("accept", ""):
+        index_path = STATIC_DIR / "index.html"
+        if index_path.exists():
+            return FileResponse(index_path)
+
+    limit_val = int(getattr(limit, "default", limit))
+    unmask_val = bool(getattr(unmask, "default", unmask))
+    with get_readonly_connection() as conn:
+        rows = conn.execute(
+            """
+            SELECT id, domain, first_seen, matched_keywords, is_hijacked_institution,
+                   institution_suffix, detected_at, verification_method, llm_reasoning
+            FROM porn_findings
+            ORDER BY is_hijacked_institution DESC, first_seen DESC
+            LIMIT ?
+            """,
+            (limit_val,),
+        ).fetchall()
+
+        findings = []
+        for r in rows:
+            raw_domain = r["domain"]
+            is_hijacked = bool(r["is_hijacked_institution"])
+            findings.append({
+                "id": r["id"],
+                "category": "porn",
+                "domain": raw_domain if unmask_val else mask_domain(raw_domain),
+                "domain_masked": mask_domain(raw_domain),
+                "raw_domain": raw_domain if unmask_val else None,
+                "first_seen": r["first_seen"],
+                "matched_keywords": r["matched_keywords"].split(",") if r["matched_keywords"] else [],
+                "is_hijacked_institution": is_hijacked,
+                "institution_suffix": r["institution_suffix"],
+                "detected_at": r["detected_at"],
+                "verification_method": r["verification_method"] or "keyword",
+                "llm_reasoning": r["llm_reasoning"],
+                # Same fixed-severity convention as /api/judol and
+                # get_porn_detail -- kept consistent between list and detail.
+                "risk_score": 95 if is_hijacked else 80,
+                "risk_level": "INDIKASI PENIPUAN",
+                "is_live": False,
+                "last_status_code": None,
+                "in_public_blacklist": False,
+            })
+
+        total = conn.execute("SELECT COUNT(*) FROM porn_findings").fetchone()[0]
+        hijacked_total = conn.execute(
+            "SELECT COUNT(*) FROM porn_findings WHERE is_hijacked_institution = 1"
+        ).fetchone()[0]
+        earliest_detected = conn.execute("SELECT MIN(first_seen) FROM porn_findings").fetchone()[0]
+
+        return {
+            "total_findings": total,
+            "hijacked_institution_count": hijacked_total,
+            "earliest_first_seen": earliest_detected,
+            "limit": limit_val,
+            "findings": findings,
+        }
+
+
+@app.get("/api/porn/{porn_id}", summary="Fetch single adult-content finding detail with reporting draft")
+@app.get("/porn/{porn_id}", include_in_schema=False)
+def get_porn_detail(porn_id: int):
+    """Returns complete technical details and generated incident report draft for an adult-content finding."""
+    with get_readonly_connection() as conn:
+        row = conn.execute(
+            """
+            SELECT id, domain, first_seen, matched_keywords, is_hijacked_institution,
+                   institution_suffix, detected_at, verification_method, llm_reasoning
+            FROM porn_findings
+            WHERE id = ?
+            """,
+            (porn_id,),
+        ).fetchone()
+
+        if not row:
+            raise HTTPException(status_code=404, detail="Porn finding not found")
+
+        domain = row["domain"]
+        matched_kws = row["matched_keywords"].split(",") if row["matched_keywords"] else []
+        is_hijacked = bool(row["is_hijacked_institution"])
+        suffix = row["institution_suffix"] or ""
+        verification_method = row["verification_method"] or "keyword"
+
+        # Risk score here is a fixed severity tier (keyword-match category,
+        # not the technical+linguistic scoring domain_findings uses) --
+        # matches the same convention already established for judol_findings.
+        risk_score = 95 if is_hijacked else 80
+        risk_level = "INDIKASI PENIPUAN"
+        brand_name = f"Instansi Resmi (.{suffix})" if is_hijacked else "Konten Pornografi/Dewasa"
+        method_name = f"Subdomain Hijack & Keyword ({', '.join(matched_kws)})" if is_hijacked else f"Keyword Match ({', '.join(matched_kws)})"
+        reasoning = (
+            f"Domain instansi resmi pemerintah/akademik (.{suffix}) disusupi subdomain konten pornografi dengan kata kunci: {', '.join(matched_kws)}. Sangat mendesak untuk dilaporkan ke CSIRT dan di-take-down oleh pengelola domain."
+            if is_hijacked
+            else f"Domain terdeteksi menyebarkan konten pornografi dengan kata kunci: {', '.join(matched_kws)}. Kategori ini termasuk cakupan pemblokiran konten negatif Kominfo (Trust+ Positif)."
+        )
+        if verification_method == "llm":
+            reasoning += (
+                f" [Verifikasi AI]: kata kunci ini ambigu di luar konteks konten dewasa, dan hanya ditandai "
+                f"setelah dinilai oleh model AI berdasarkan nama domain secara keseluruhan (bukan aturan pasti). "
+                f"Alasan model: {row['llm_reasoning'] or '-'}"
+            )
+
+        channels = get_recommended_channels(domain, brand_name)
+        if is_hijacked and not any("BSSN" in c.name for c in channels):
+            channels.append(
+                ReportingChannel(
+                    name="Direktorat Operasi Keamanan Siber BSSN (Gov-CSIRT)",
+                    target_type="Pusat Tanggap Insiden Siber Pemerintah",
+                    contact="bantuan70@bssn.go.id | Telp: (021) 78833610 | WA: 0812-8135-4598 (24/7)",
+                    submission_method="Email CSIRT BSSN (bantuan70@bssn.go.id) / Hotline Aduan Siber",
+                    notes=f"Notifikasi insiden peretasan / defacement subdomain instansi .{suffix} untuk penanganan darurat.",
+                )
+            )
+
+        draft_text = format_report_text(
+            finding_id=row["id"],
+            domain=domain,
+            brand=brand_name,
+            risk_score=risk_score,
+            risk_level=risk_level,
+            first_seen_iso=row["first_seen"],
+            is_live=False,
+            match_method=method_name,
+            registrar="PANDI (.ID Registry)" if domain.endswith(".id") else None,
+            nameservers=None,
+            reasoning=reasoning,
+            channels=channels,
+        )
+
+        return {
+            "id": row["id"],
+            "domain": domain,
+            "domain_masked": mask_domain(domain),
+            "raw_domain": domain,
+            "first_seen": row["first_seen"],
+            "matched_brand": brand_name,
+            "match_method": method_name,
+            "risk_score": risk_score,
+            "risk_level": risk_level,
+            # Judol/porn findings come from a keyword scan of ct_raw, not the
+            # domain_findings Tahap-2 HEAD-check pipeline -- there is no real
+            # liveness/status-code data to report, so this stays honestly
+            # null/false rather than a fabricated "200 OK" placeholder.
+            "is_live": False,
+            "last_status_code": None,
+            "in_public_blacklist": False,
+            "campaign_id": None,
+            "reasoning": reasoning,
+            "matched_keywords": matched_kws,
+            "is_hijacked_institution": is_hijacked,
+            "institution_suffix": suffix,
+            "detected_at": row["detected_at"],
+            "verification_method": verification_method,
+            "llm_reasoning": row["llm_reasoning"],
+            "csirt_report_draft": draft_text,
+            "escalation_channels": [
+                {
+                    "name": c.name,
+                    "target_type": c.target_type,
+                    "contact": c.contact,
+                    "submission_method": c.submission_method,
+                    "notes": c.notes,
+                }
+                for c in channels
+            ],
+        }
+
+
 @app.get("/api/findings/{finding_id}", summary="Fetch single finding details with CSIRT draft report")
 @app.get("/findings/{finding_id}", include_in_schema=False)
 def get_finding_detail(finding_id: int):
@@ -581,7 +989,7 @@ def get_finding_detail(finding_id: int):
             """
             SELECT id, domain, first_seen, registered_at, registrar, nameservers,
                    matched_brand, match_method, risk_score, risk_level,
-                   is_live, in_public_blacklist_at_detection, campaign_id,
+                   is_live, last_status_code, in_public_blacklist_at_detection, campaign_id,
                    reasoning
             FROM domain_findings
             WHERE id = ?
@@ -590,7 +998,8 @@ def get_finding_detail(finding_id: int):
         ).fetchone()
 
         if not row:
-            raise HTTPException(status_code=404, detail="Finding not found")
+            # Fallback to check judol_findings if finding_id exists there
+            return get_judol_detail(finding_id)
 
         try:
             draft = generate_report_draft(finding_id, conn)
@@ -622,6 +1031,7 @@ def get_finding_detail(finding_id: int):
             "risk_score": row["risk_score"],
             "risk_level": row["risk_level"],
             "is_live": bool(row["is_live"]),
+            "last_status_code": row["last_status_code"],
             "in_public_blacklist": bool(row["in_public_blacklist_at_detection"]),
             "campaign_id": row["campaign_id"],
             "reasoning": row["reasoning"],
@@ -791,6 +1201,75 @@ def get_metrics():
             "total_findings_flagged": total_flagged,
             "calibration_status": calibration_status,
         }
+
+
+@app.get("/api/eval/details", summary="Fetch full ground-truth evaluation breakdown")
+@app.get("/eval/details", include_in_schema=False)
+def get_eval_details():
+    """Returns confusion matrix, latency distribution, score histogram, and
+    misclassified samples straight from data/eval_results.json -- the same
+    file /api/metrics reads, so these numbers never diverge from the
+    precision/recall/F1 already shown elsewhere in the dashboard.
+    """
+    eval_file = get_eval_results_path()
+    if not eval_file.exists():
+        return {"available": False}
+
+    try:
+        with open(eval_file, "r", encoding="utf-8") as f:
+            eval_data = json.load(f)
+    except Exception as e:
+        logger.warning("Failed to parse eval_results.json for /api/eval/details: %s", e)
+        return {"available": False}
+
+    summary = eval_data.get("summary", {})
+    results = eval_data.get("results", [])
+    errors = eval_data.get("errors", [])
+
+    # Score histogram bucketed the same way lib/scoring.py::RISK_THRESHOLDS
+    # classifies a score, computed here from the real per-sample results
+    # rather than re-derived/guessed.
+    buckets = {"AMAN (0-39)": 0, "HATI-HATI (40-69)": 0, "INDIKASI PENIPUAN (70-100)": 0}
+    for r in results:
+        score = r.get("score", 0)
+        if score >= 70:
+            buckets["INDIKASI PENIPUAN (70-100)"] += 1
+        elif score >= 40:
+            buckets["HATI-HATI (40-69)"] += 1
+        else:
+            buckets["AMAN (0-39)"] += 1
+
+    # Frequency of each detection signal across all samples, to show which
+    # heuristics actually carried the evaluation (not a guess -- tallied
+    # directly from each result's real breakdown array).
+    signal_counts: dict[str, int] = {}
+    for r in results:
+        for b in r.get("breakdown", []):
+            name = b.get("signal")
+            if name:
+                signal_counts[name] = signal_counts.get(name, 0) + 1
+    top_signals = sorted(signal_counts.items(), key=lambda kv: kv[1], reverse=True)[:8]
+
+    return {
+        "available": True,
+        "timestamp": summary.get("timestamp"),
+        "total_samples": summary.get("total_samples", len(results)),
+        "confusion_matrix": summary.get("confusion_matrix", {}),
+        "latency_ms": summary.get("latency_ms", {}),
+        "score_histogram": [{"label": k, "count": v} for k, v in buckets.items()],
+        "top_signals": [{"signal": k, "count": v} for k, v in top_signals],
+        "misclassified": [
+            {
+                "id": e.get("id"),
+                "ground_truth": e.get("ground_truth"),
+                "predicted": e.get("predicted"),
+                "score": e.get("score"),
+                "level": e.get("level"),
+                "reasons": e.get("reasons", []),
+            }
+            for e in errors
+        ],
+    }
 
 
 @app.get("/api/health", summary="Fetch operational health status")
