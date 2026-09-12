@@ -2997,96 +2997,76 @@ function renderActiveArchTab() {
         </div>
       </div>
 
-      <!-- Detailed 5-Zone Topology Flow with Arrow Connectors -->
+      <!-- Compact Node Directory (left) + Sticky Inspector (right) -->
       <div class="arch-canvas-container">
-        <div class="arch-zones-flow">
-          ${ARCH_ZONES.map((z, idx) => `
-            <div class="arch-zone ${z.cssClass}">
-              <div class="arch-zone-header">
-                <span class="arch-zone-tag">${z.tag}</span>
-                <span class="arch-zone-title">${z.title}</span>
-              </div>
-              ${z.nodes.map(n => `
-                <div class="arch-node ${selectedArchNode && selectedArchNode.id === n.id ? "selected" : ""}" id="${n.id}" data-node-id="${n.id}">
-                  <div class="arch-node-top">
-                    <span class="arch-node-icon ${n.tile}">
-                      ${ICONS[n.icon] || ICONS.shieldLock}
-                    </span>
-                    <span class="arch-node-metric">${n.metric}</span>
-                  </div>
-                  <div class="arch-node-title">${n.title}</div>
-                  <div class="arch-node-desc">${n.subtitle}</div>
+        <div class="arch-main-col">
+          <div class="arch-zone-directory">
+            ${ARCH_ZONES.map(z => `
+              <div class="arch-zone-row ${z.cssClass}">
+                <div class="arch-zone-row-header">
+                  <span class="arch-zone-tag">${z.tag}</span>
+                  <span class="arch-zone-title">${z.title}</span>
                 </div>
-              `).join("")}
-            </div>
-
-            ${idx < ARCH_ZONES.length - 1 ? `
-              <div class="arch-flow-arrow" id="flow-arrow-${idx + 1}" title="Aliran Data Tahap ${idx + 1}">
-                <div class="arch-flow-arrow-badge">${idx + 1}</div>
-                <div class="arch-flow-arrow-line">
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-                    <line x1="5" y1="12" x2="19" y2="12"></line>
-                    <polyline points="12 5 19 12 12 19"></polyline>
-                  </svg>
+                <div class="arch-chip-wrap">
+                  ${z.nodes.map(n => `
+                    <div class="arch-node ${selectedArchNode && selectedArchNode.id === n.id ? "selected" : ""}" id="${n.id}" data-node-id="${n.id}" title="${n.title}">
+                      <span class="arch-node-icon ${n.tile}">${ICONS[n.icon] || ICONS.shieldLock}</span>
+                      <span class="arch-node-chip-title">${n.title}</span>
+                    </div>
+                  `).join("")}
                 </div>
               </div>
-            ` : ""}
-          `).join("")}
+            `).join("")}
+          </div>
         </div>
 
-        <!-- Live Simulation Trace Terminal -->
-        <div class="arch-trace-box" id="arch-trace-box"></div>
+        <div class="arch-side-col">
+          <!-- Technical Inspector Panel: previews on hover, pins on click -->
+          <div id="arch-inspector-wrap">
+            ${renderArchInspectorCard(selectedArchNode || ARCH_ZONES[1].nodes[0])}
+          </div>
 
-        <!-- Technical Inspector Panel -->
-        <div id="arch-inspector-wrap">
-          ${renderArchInspectorCard(selectedArchNode || ARCH_ZONES[1].nodes[0])}
+          <!-- Live Simulation Trace Terminal -->
+          <div class="arch-trace-box" id="arch-trace-box"></div>
         </div>
       </div>
     `;
 
-    // Attach Node Click Listeners
+    const inspWrap = () => document.getElementById("arch-inspector-wrap");
+    const findArchNode = (id) => {
+      for (const zone of ARCH_ZONES) {
+        const found = zone.nodes.find(n => n.id === id);
+        if (found) return found;
+      }
+      return null;
+    };
+    const previewArchNode = (node) => {
+      const wrap = inspWrap();
+      if (wrap && node) wrap.innerHTML = renderArchInspectorCard(node);
+    };
+    const pinArchNode = (node) => {
+      if (!node) return;
+      selectedArchNode = node;
+      container.querySelectorAll(".arch-node").forEach(n => n.classList.remove("selected"));
+      const chipEl = document.getElementById(node.id);
+      if (chipEl) chipEl.classList.add("selected");
+      previewArchNode(node);
+    };
+
+    // Directory chips: hover previews in the side panel, click pins the selection
     container.querySelectorAll(".arch-node").forEach(nodeEl => {
-      nodeEl.addEventListener("click", () => {
-        const id = nodeEl.dataset.nodeId;
-        for (const zone of ARCH_ZONES) {
-          const found = zone.nodes.find(n => n.id === id);
-          if (found) {
-            selectedArchNode = found;
-            break;
-          }
-        }
-        container.querySelectorAll(".arch-node").forEach(n => n.classList.remove("selected"));
-        nodeEl.classList.add("selected");
-        const inspWrap = document.getElementById("arch-inspector-wrap");
-        if (inspWrap && selectedArchNode) {
-          inspWrap.innerHTML = renderArchInspectorCard(selectedArchNode);
-        }
-      });
+      nodeEl.addEventListener("mouseenter", () => previewArchNode(findArchNode(nodeEl.dataset.nodeId)));
+      nodeEl.addEventListener("mouseleave", () => previewArchNode(selectedArchNode || ARCH_ZONES[1].nodes[0]));
+      nodeEl.addEventListener("click", () => pinArchNode(findArchNode(nodeEl.dataset.nodeId)));
     });
 
-    // Attach Miro Diagram Node Card Click Listeners
+    // Miro pipeline node cards: same hover-preview / click-to-pin behavior
     container.querySelectorAll(".miro-node-card").forEach(card => {
-      card.addEventListener("click", () => {
-        const targetNodeId = card.dataset.zoneNode;
-        if (!targetNodeId) return;
-        for (const zone of ARCH_ZONES) {
-          const found = zone.nodes.find(n => n.id === targetNodeId);
-          if (found) {
-            selectedArchNode = found;
-            break;
-          }
-        }
-        container.querySelectorAll(".arch-node").forEach(n => n.classList.remove("selected"));
-        const targetNodeEl = document.getElementById(targetNodeId);
-        if (targetNodeEl) {
-          targetNodeEl.classList.add("selected");
-          targetNodeEl.scrollIntoView({ behavior: "smooth", block: "nearest", inline: "center" });
-        }
-        const inspWrap = document.getElementById("arch-inspector-wrap");
-        if (inspWrap && selectedArchNode) {
-          inspWrap.innerHTML = renderArchInspectorCard(selectedArchNode);
-        }
-      });
+      const targetNodeId = card.dataset.zoneNode;
+      if (!targetNodeId) return;
+      card.addEventListener("mouseenter", () => previewArchNode(findArchNode(targetNodeId)));
+      card.addEventListener("mouseleave", () => previewArchNode(selectedArchNode || ARCH_ZONES[1].nodes[0]));
+      card.addEventListener("click", () => pinArchNode(findArchNode(targetNodeId)));
     });
 
     // Attach Miro Step Badges Click Listener -> Run Simulation
