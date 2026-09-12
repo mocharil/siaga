@@ -1272,10 +1272,97 @@ def get_eval_details():
     }
 
 
+@app.get("/api/insight/case-study", summary="Fetch the largest infrastructure-cluster campaign as a case study")
+@app.get("/insight/case-study", include_in_schema=False)
+def get_case_study():
+    """Builds a Problem -> Data -> Insight -> Action -> Impact narrative from
+    whichever nameserver-based campaign currently has the most members in
+    the active database.
+
+    This is generic query logic, not demo-specific: on real production data
+    it surfaces the single biggest real coordinated campaign found so far
+    (or none, if no cluster has 2+ members yet). It only produces a dramatic
+    "before/after" story on the demo dataset because that dataset was
+    deliberately built with one large synthetic cluster -- see
+    scripts/generate_demo_data.py.
+    """
+    with get_readonly_connection() as conn:
+        campaign = conn.execute(
+            """
+            SELECT id, cluster_type, cluster_key, member_count, first_detected_at, last_updated_at
+            FROM campaigns
+            WHERE cluster_type = 'nameserver'
+            ORDER BY member_count DESC
+            LIMIT 1
+            """
+        ).fetchone()
+        if not campaign or campaign["member_count"] < 2:
+            return {"available": False}
+
+        members = conn.execute(
+            """
+            SELECT domain, first_seen, matched_brand, risk_score, is_live,
+                   in_public_blacklist_at_detection, reasoning
+            FROM domain_findings
+            WHERE campaign_id = ?
+            ORDER BY first_seen ASC
+            """,
+            (campaign["id"],),
+        ).fetchall()
+        if not members:
+            return {"available": False}
+
+        brand = members[0]["matched_brand"]
+        total = len(members)
+        live_now = sum(1 for m in members if m["is_live"])
+        blacklisted_now = sum(1 for m in members if m["in_public_blacklist_at_detection"])
+        first_seen_dates = [m["first_seen"] for m in members if m["first_seen"]]
+
+        # Daily new-domain count for this specific campaign, for a small
+        # rise/fall timeline chart in the UI.
+        from collections import Counter
+
+        day_counts = Counter(d[:10] for d in first_seen_dates)
+        timeline = [{"date": d, "count": c} for d, c in sorted(day_counts.items())]
+
+        return {
+            "available": True,
+            "problem": (
+                f"Lonjakan domain baru mencatut brand '{brand}' terdeteksi dalam waktu singkat, "
+                f"semuanya menggunakan pola urgensi tinggi khas phishing perbankan."
+            ),
+            "evidence": {
+                "target_brand": brand,
+                "total_domains": total,
+                "cluster_infrastructure": campaign["cluster_key"],
+                "first_detected_at": campaign["first_detected_at"],
+                "timeline": timeline,
+            },
+            "insight": (
+                f"Seluruh {total} domain berbagi nameserver yang identik ({campaign['cluster_key']}) -- "
+                f"bukan {total} kejadian terpisah, melainkan satu sindikat yang sama."
+            ),
+            "action": (
+                "Sistem menyiapkan draf laporan RFC 2350 mencakup seluruh anggota klaster sekaligus, "
+                "ditujukan ke Aduan Konten Kominfo dan/atau abuse desk PANDI untuk domain .id."
+            ),
+            "impact": {
+                "domains_still_live": live_now,
+                "domains_now_in_blacklist": blacklisted_now,
+                "total_domains": total,
+                "summary": (
+                    f"Dari {total} domain klaster ini, {live_now} yang masih aktif merespons saat ini "
+                    f"dan {blacklisted_now} sudah masuk daftar blacklist publik."
+                ),
+            },
+        }
+
+
 @app.get("/api/health", summary="Fetch operational health status")
 @app.get("/health", include_in_schema=False)
 def get_health():
     """Evaluates operational health reusing check_health from scripts/healthcheck.py."""
+    demo_mode = os.environ.get("SIAGA_DEMO_MODE") == "1"
     db_path = get_db_path()
     if db_path.exists():
         try:
@@ -1292,22 +1379,25 @@ def get_health():
                     "latest_heartbeat_ok": result.latest_heartbeat_ok,
                     "staleness_hours": result.staleness_hours,
                     "issues": result.issues,
+                    "demo_mode": demo_mode,
                 }
         except Exception:
             pass
 
-    # Serverless fallback with snapshot
+    # DB unreachable and health check itself failed -- report honestly rather
+    # than fabricating an "ok" snapshot (see CLAUDE.md rule #2).
     return {
-        "status": "ok",
-        "is_healthy": True,
+        "status": "unknown",
+        "is_healthy": False,
         "checked_at": datetime.now(WIB).isoformat(),
-        "latest_collector_status": "ok",
-        "latest_collector_time": "2026-09-01T06:30:00+07:00",
-        "last_successful_collector_time": "2026-09-01T06:30:00+07:00",
-        "latest_heartbeat_date": "2026-09-01",
-        "latest_heartbeat_ok": True,
-        "staleness_hours": 0.0,
-        "issues": [],
+        "latest_collector_status": None,
+        "latest_collector_time": None,
+        "last_successful_collector_time": None,
+        "latest_heartbeat_date": None,
+        "latest_heartbeat_ok": None,
+        "staleness_hours": None,
+        "issues": ["Database tidak dapat diakses atau healthcheck gagal dijalankan."],
+        "demo_mode": demo_mode,
     }
 
 

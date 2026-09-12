@@ -707,7 +707,7 @@ function pageShell({ crumb, title, desc, actions = "" }) {
 // ---------------------------------------------------------------------------
 
 async function renderOverview(root) {
-  const [metrics, today, top, health, judolRes, pornRes, analytics, trend] = await Promise.all([
+  const [metrics, today, top, health, judolRes, pornRes, analytics, trend, caseStudy] = await Promise.all([
     api("/api/metrics"),
     api("/api/stats/today"),
     api("/api/findings/top?limit=10&unmask=true"),
@@ -716,6 +716,7 @@ async function renderOverview(root) {
     api("/api/porn?limit=1").catch(() => ({ hijacked_institution_count: 0 })),
     api("/api/stats/analytics"),
     api("/api/stats/trend?days=2"),
+    api("/api/insight/case-study").catch(() => ({ available: false })),
   ]);
 
   const hijackedTotal = (judolRes?.hijacked_institution_count || 0) + (pornRes?.hijacked_institution_count || 0);
@@ -819,6 +820,66 @@ async function renderOverview(root) {
         ${leadTimeCaption}
       </div>
     </div>
+
+    ${!caseStudy.available ? "" : `
+    <!-- Insight Prioritas: Problem -> Data -> Insight -> Action -> Impact -->
+    <div class="section">
+      <div class="panel insight-story-panel">
+        <div class="panel-header-row">
+          <div>
+            <h2 class="section-title">${ICONS.lightning} Insight Prioritas</h2>
+            <p class="section-desc">Kampanye infrastruktur terbesar yang saat ini terdeteksi sistem, dari gejala sampai hasil penanganan.</p>
+          </div>
+          <span class="badge badge-danger">${caseStudy.evidence.total_domains} domain terhubung</span>
+        </div>
+
+        <div class="insight-story-grid">
+          <div class="insight-story-step">
+            <div class="insight-story-step-lbl">1. Masalah</div>
+            <div class="insight-story-step-body">${caseStudy.problem}</div>
+          </div>
+          <div class="insight-story-step">
+            <div class="insight-story-step-lbl">2. Data & Evidence</div>
+            <div class="insight-story-step-body">
+              CT Log mendeteksi <strong>${caseStudy.evidence.total_domains} domain baru</strong> mencatut
+              <strong>${esc(caseStudy.evidence.target_brand)}</strong> sejak ${fmtDate(caseStudy.evidence.first_detected_at)}.
+              <div class="insight-mini-timeline">
+                ${caseStudy.evidence.timeline.map((t) => `
+                  <div class="insight-mini-bar" style="height:${Math.max(10, t.count * 10)}px;" title="${t.date}: ${t.count} domain baru"></div>
+                `).join("")}
+              </div>
+            </div>
+          </div>
+          <div class="insight-story-step">
+            <div class="insight-story-step-lbl">3. Insight</div>
+            <div class="insight-story-step-body">${caseStudy.insight}</div>
+          </div>
+          <div class="insight-story-step">
+            <div class="insight-story-step-lbl">4. Tindakan Pemerintah</div>
+            <div class="insight-story-step-body">${caseStudy.action}</div>
+          </div>
+          <div class="insight-story-step insight-story-step-impact">
+            <div class="insight-story-step-lbl">5. Dampak Terukur</div>
+            <div class="insight-story-step-body">
+              ${caseStudy.impact.summary}
+              <div class="insight-impact-bars">
+                <div class="insight-impact-bar-row">
+                  <span>Masih aktif</span>
+                  <div class="insight-impact-track"><div class="insight-impact-fill red" style="width:${Math.round(caseStudy.impact.domains_still_live / caseStudy.impact.total_domains * 100)}%;"></div></div>
+                  <strong>${caseStudy.impact.domains_still_live}/${caseStudy.impact.total_domains}</strong>
+                </div>
+                <div class="insight-impact-bar-row">
+                  <span>Masuk blacklist publik</span>
+                  <div class="insight-impact-track"><div class="insight-impact-fill green" style="width:${Math.round(caseStudy.impact.domains_now_in_blacklist / caseStudy.impact.total_domains * 100)}%;"></div></div>
+                  <strong>${caseStudy.impact.domains_now_in_blacklist}/${caseStudy.impact.total_domains}</strong>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    `}
 
     <!-- 2-Column: Intelligence Streams & 24-Hour Velocity -->
     <div class="two-col">
@@ -5194,8 +5255,11 @@ async function pollHealth() {
 
     const feedTag = document.getElementById("topbar-feed-tag");
     if (feedTag) {
-      feedTag.className = `ios-pill ${h.is_healthy ? "ios-pill-blue" : "ios-pill-success"}`;
+      feedTag.className = `ios-pill ${h.is_healthy ? "ios-pill-success" : "ios-pill-blue"}`;
     }
+
+    const demoBanner = document.getElementById("demo-mode-banner");
+    if (demoBanner) demoBanner.hidden = !h.demo_mode;
   } catch (e) {
     const latencyEl = document.getElementById("sidebar-latency");
     if (latencyEl) latencyEl.textContent = "—";
