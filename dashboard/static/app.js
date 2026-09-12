@@ -703,6 +703,55 @@ function pageShell({ crumb, title, desc, actions = "" }) {
 }
 
 // ---------------------------------------------------------------------------
+// STYLIZED INDONESIA HEATMAP (illustrative archipelago layout, NOT
+// survey-grade coastline data -- island shapes are simplified blobs kept in
+// correct relative west-to-east order so the map reads as "Indonesia" at a
+// glance, but the caption always says so explicitly).
+// ---------------------------------------------------------------------------
+
+const INDONESIA_MAP_PIN_COORDS = {
+  "Sumatera Utara": [130, 95],
+  "DKI Jakarta": [258, 267],
+  "Jawa Barat": [298, 274],
+  "Jawa Tengah": [358, 276],
+  "Jawa Timur": [422, 273],
+};
+
+function renderIndonesiaHeatmapSvg(regions) {
+  const maxPct = Math.max(...regions.map((r) => r.intensity_pct), 1);
+  const pins = regions
+    .filter((r) => INDONESIA_MAP_PIN_COORDS[r.region])
+    .map((r) => {
+      const [x, y] = INDONESIA_MAP_PIN_COORDS[r.region];
+      const radius = 5 + (r.intensity_pct / maxPct) * 13;
+      return `
+        <g class="geo-pin-group">
+          <circle cx="${x}" cy="${y}" r="${radius}" class="geo-pin-halo" />
+          <circle cx="${x}" cy="${y}" r="${Math.max(3, radius * 0.4)}" class="geo-pin-core" />
+          <text x="${x}" y="${y - radius - 6}" class="geo-pin-label">${esc(r.region)}</text>
+        </g>
+      `;
+    })
+    .join("");
+
+  return `
+    <div class="geo-map-wrap">
+      <svg viewBox="0 0 900 320" class="geo-map-svg" role="img" aria-label="Peta ilustratif estimasi sebaran regional">
+        <!-- Simplified island silhouettes, west to east: Sumatra, Java, Kalimantan, Sulawesi, Papua -->
+        <path class="geo-island" d="M70,30 C110,20 150,50 165,110 C180,170 150,230 110,255 C85,235 60,190 55,140 C50,90 45,45 70,30 Z" />
+        <path class="geo-island" d="M225,255 C280,240 350,248 420,258 C470,265 505,272 520,280 C470,292 380,288 300,282 C265,279 230,270 225,255 Z" />
+        <path class="geo-island" d="M330,60 C400,45 480,60 530,100 C560,130 555,180 510,210 C450,235 370,220 335,175 C310,140 305,90 330,60 Z" />
+        <path class="geo-island" d="M580,95 C610,85 645,95 655,125 C665,150 650,175 660,200 C635,215 605,200 590,175 C575,150 565,115 580,95 Z" />
+        <path class="geo-island" d="M745,130 C790,115 850,120 875,150 C890,175 880,205 850,220 C805,235 755,220 740,190 C728,168 725,145 745,130 Z" />
+
+        ${pins}
+      </svg>
+      <p class="geo-map-caption">Peta ilustratif (bukan skala geografis presisi) -- ukuran titik menunjukkan intensitas estimasi, bukan koordinat lokasi terverifikasi.</p>
+    </div>
+  `;
+}
+
+// ---------------------------------------------------------------------------
 // OVERVIEW VIEW (iPadOS Smart Widgets & High-Density iOS Feed)
 // ---------------------------------------------------------------------------
 
@@ -903,6 +952,10 @@ async function renderOverview(root) {
             <h2 class="section-title">Aktivitas Terkini</h2>
             <p class="section-desc">Temuan terbaru lintas kategori, diurutkan berdasarkan waktu deteksi</p>
           </div>
+          <span class="live-status-pill" title="Collector &amp; pipeline berjalan otomatis harian">
+            <span class="live-dot"></span>
+            <span>Monitoring Aktif</span>
+          </span>
         </div>
         <div class="activity-feed-list">
           ${(activityFeed.items || []).length === 0 ? `<div class="empty-state">Belum ada aktivitas.</div>` : activityFeed.items.map((it) => {
@@ -930,6 +983,7 @@ async function renderOverview(root) {
           </div>
         </div>
         ${!regionalHeatmap.available ? `<div class="empty-state">Belum cukup data.</div>` : `
+        ${renderIndonesiaHeatmapSvg(regionalHeatmap.regions)}
         <div class="region-heatmap-list">
           ${regionalHeatmap.regions.map((r) => `
             <div class="region-heatmap-row">
