@@ -376,6 +376,15 @@ def test_zero_external_cdn_dependencies():
     runtime dependency. D3's actual concern is the page working with zero
     network egress at load time; a link the user might click doesn't
     threaten that the way a CDN <script src> or @import would.
+
+    EXCEPTION (demo-video-showcase branch only, never merged to master):
+    index.html loads Leaflet (JS+CSS) from cdnjs, and the regional-estimate
+    map on Overview then fetches OpenStreetMap tiles at runtime, purely for
+    recording video-demo footage with a real geographic map instead of a
+    hand-drawn SVG. This deliberately trades the "zero network egress" D3
+    guarantee for that one panel on this branch -- the dashboard must have
+    internet access for the map to render, and it will not on a fully
+    offline/production install. This exception must never reach master.
     """
     import re
 
@@ -386,12 +395,21 @@ def test_zero_external_cdn_dependencies():
         r'@import\s+["\']https?://',
         r'fetch\(\s*["\']https?://',
     ]
+    # demo-only allowance: Leaflet from cdnjs (map library + its stylesheet),
+    # loaded with a pinned version and a verified SRI hash in index.html.
+    allowed_demo_only_hosts = ("cdnjs.cloudflare.com/ajax/libs/leaflet/",)
     text_extensions = {".html", ".css", ".js", ".json", ".svg"}
     for asset in static_path.glob("*"):
         if asset.suffix.lower() not in text_extensions:
             continue
         text = asset.read_text(encoding="utf-8")
         for pattern in resource_loading_patterns:
-            assert not re.search(pattern, text, re.IGNORECASE), (
-                f"Found remote resource load in {asset.name} matching {pattern}"
-            )
+            for match in re.finditer(pattern, text, re.IGNORECASE):
+                # Check the immediate surrounding line for an allowed host,
+                # rather than exempting the whole file.
+                line_start = text.rfind("\n", 0, match.start()) + 1
+                line_end = text.find("\n", match.end())
+                line = text[line_start : line_end if line_end != -1 else None]
+                assert any(host in line for host in allowed_demo_only_hosts), (
+                    f"Found remote resource load in {asset.name} matching {pattern}: {line.strip()}"
+                )

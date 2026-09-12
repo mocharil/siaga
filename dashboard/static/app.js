@@ -703,52 +703,60 @@ function pageShell({ crumb, title, desc, actions = "" }) {
 }
 
 // ---------------------------------------------------------------------------
-// STYLIZED INDONESIA HEATMAP (illustrative archipelago layout, NOT
-// survey-grade coastline data -- island shapes are simplified blobs kept in
-// correct relative west-to-east order so the map reads as "Indonesia" at a
-// glance, but the caption always says so explicitly).
+// REGIONAL HEATMAP -- real map via Leaflet.js (OpenStreetMap tiles), loaded
+// from cdnjs in index.html. Marker positions are real province-capital
+// coordinates (public, well-known); marker RADIUS encodes the estimate from
+// /api/insight/regional-heatmap, which is itself derived (not measured) --
+// see that endpoint's docstring. A module-level handle lets us tear down
+// the previous map instance before re-initializing, since Leaflet throws if
+// you call L.map() twice on the same container (happens when the user
+// navigates away from Overview and back).
 // ---------------------------------------------------------------------------
 
-const INDONESIA_MAP_PIN_COORDS = {
-  "Sumatera Utara": [130, 95],
-  "DKI Jakarta": [258, 267],
-  "Jawa Barat": [298, 274],
-  "Jawa Tengah": [358, 276],
-  "Jawa Timur": [422, 273],
+const REGION_CENTER_COORDS = {
+  "Sumatera Utara": [3.5952, 98.6722],   // Medan
+  "DKI Jakarta": [-6.2088, 106.8456],    // Jakarta
+  "Jawa Barat": [-6.9175, 107.6191],     // Bandung
+  "Jawa Tengah": [-6.9667, 110.4167],    // Semarang
+  "Jawa Timur": [-7.2575, 112.7521],     // Surabaya
 };
 
-function renderIndonesiaHeatmapSvg(regions) {
+let _regionMapInstance = null;
+
+function initRegionalLeafletMap(containerId, regions) {
+  const el = document.getElementById(containerId);
+  if (!el || typeof L === "undefined") return;
+
+  if (_regionMapInstance) {
+    _regionMapInstance.remove();
+    _regionMapInstance = null;
+  }
+
+  const map = L.map(containerId, { scrollWheelZoom: false }).setView([-2.5, 118], 4.4);
+  _regionMapInstance = map;
+
+  L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+    attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+    maxZoom: 10,
+  }).addTo(map);
+
   const maxPct = Math.max(...regions.map((r) => r.intensity_pct), 1);
-  const pins = regions
-    .filter((r) => INDONESIA_MAP_PIN_COORDS[r.region])
-    .map((r) => {
-      const [x, y] = INDONESIA_MAP_PIN_COORDS[r.region];
-      const radius = 5 + (r.intensity_pct / maxPct) * 13;
-      return `
-        <g class="geo-pin-group">
-          <circle cx="${x}" cy="${y}" r="${radius}" class="geo-pin-halo" />
-          <circle cx="${x}" cy="${y}" r="${Math.max(3, radius * 0.4)}" class="geo-pin-core" />
-          <text x="${x}" y="${y - radius - 6}" class="geo-pin-label">${esc(r.region)}</text>
-        </g>
-      `;
-    })
-    .join("");
-
-  return `
-    <div class="geo-map-wrap">
-      <svg viewBox="0 0 900 320" class="geo-map-svg" role="img" aria-label="Peta ilustratif estimasi sebaran regional">
-        <!-- Simplified island silhouettes, west to east: Sumatra, Java, Kalimantan, Sulawesi, Papua -->
-        <path class="geo-island" d="M70,30 C110,20 150,50 165,110 C180,170 150,230 110,255 C85,235 60,190 55,140 C50,90 45,45 70,30 Z" />
-        <path class="geo-island" d="M225,255 C280,240 350,248 420,258 C470,265 505,272 520,280 C470,292 380,288 300,282 C265,279 230,270 225,255 Z" />
-        <path class="geo-island" d="M330,60 C400,45 480,60 530,100 C560,130 555,180 510,210 C450,235 370,220 335,175 C310,140 305,90 330,60 Z" />
-        <path class="geo-island" d="M580,95 C610,85 645,95 655,125 C665,150 650,175 660,200 C635,215 605,200 590,175 C575,150 565,115 580,95 Z" />
-        <path class="geo-island" d="M745,130 C790,115 850,120 875,150 C890,175 880,205 850,220 C805,235 755,220 740,190 C728,168 725,145 745,130 Z" />
-
-        ${pins}
-      </svg>
-      <p class="geo-map-caption">Peta ilustratif (bukan skala geografis presisi) -- ukuran titik menunjukkan intensitas estimasi, bukan koordinat lokasi terverifikasi.</p>
-    </div>
-  `;
+  regions
+    .filter((r) => REGION_CENTER_COORDS[r.region])
+    .forEach((r) => {
+      const radius = 8 + (r.intensity_pct / maxPct) * 22;
+      L.circleMarker(REGION_CENTER_COORDS[r.region], {
+        radius,
+        color: "#ff3b30",
+        weight: 1.5,
+        fillColor: "#ff3b30",
+        fillOpacity: 0.35,
+      })
+        .addTo(map)
+        .bindPopup(
+          `<strong>${esc(r.region)}</strong><br>Estimasi: ~${fmtInt(r.estimated_count)} temuan`
+        );
+    });
 }
 
 // ---------------------------------------------------------------------------
@@ -983,7 +991,8 @@ async function renderOverview(root) {
           </div>
         </div>
         ${!regionalHeatmap.available ? `<div class="empty-state">Belum cukup data.</div>` : `
-        ${renderIndonesiaHeatmapSvg(regionalHeatmap.regions)}
+        <div id="overview-region-map" class="region-map-leaflet"></div>
+        <p class="geo-map-caption">Titik menunjukkan intensitas estimasi (ukuran &amp; opacity), bukan koordinat lokasi terverifikasi -- lihat catatan estimasi di atas.</p>
         <div class="region-heatmap-list">
           ${regionalHeatmap.regions.map((r) => `
             <div class="region-heatmap-row">
@@ -1086,6 +1095,11 @@ async function renderOverview(root) {
       </div>
     </div>
   `;
+
+  // Initialize the real Leaflet map for the regional heatmap, if present
+  if (regionalHeatmap.available) {
+    initRegionalLeafletMap("overview-region-map", regionalHeatmap.regions);
+  }
 
   // Render 24-Hour Velocity Bars
   const series = analytics.hourly_velocity.series || [];
