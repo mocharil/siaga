@@ -1139,6 +1139,132 @@ img.brand-logo-img {
 .insight-impact-fill.red { background: var(--ios-red, #ff3b30); }
 .insight-impact-fill.green { background: var(--ios-green, #34c759); }
 
+.insight-secondary-row {
+  margin-top: 14px;
+  padding-top: 14px;
+  border-top: 1px dashed rgba(0,0,0,0.1);
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  gap: 10px;
+}
+.insight-secondary-body {
+  font-size: 12px;
+  color: var(--text-secondary);
+  line-height: 1.55;
+  flex: 1;
+  min-width: 240px;
+}
+
+/* ================= ACTIVITY FEED ================= */
+.activity-feed-list {
+  display: flex;
+  flex-direction: column;
+  max-height: 380px;
+  overflow-y: auto;
+}
+.activity-feed-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 18px;
+  border-bottom: 1px solid rgba(0,0,0,0.05);
+}
+.activity-feed-row:last-child { border-bottom: none; }
+.activity-feed-icon { font-size: 16px; flex-shrink: 0; }
+.activity-feed-mid { flex: 1; min-width: 0; }
+.activity-feed-title {
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--text-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.activity-feed-domain {
+  font-weight: 400;
+  color: var(--text-tertiary);
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: 11px;
+  margin-left: 4px;
+}
+.activity-feed-time {
+  font-size: 11px;
+  color: var(--text-tertiary);
+}
+
+/* ================= REGIONAL HEATMAP ================= */
+.region-heatmap-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.region-heatmap-row {
+  display: grid;
+  grid-template-columns: 110px 1fr 50px;
+  align-items: center;
+  gap: 10px;
+}
+.region-heatmap-label {
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+.region-heatmap-track {
+  background: rgba(0,0,0,0.06);
+  border-radius: 6px;
+  height: 10px;
+  overflow: hidden;
+}
+.region-heatmap-fill {
+  height: 100%;
+  border-radius: 6px;
+  background: linear-gradient(90deg, var(--ios-sky, #5ac8fa), var(--ios-blue, #007aff));
+}
+.region-heatmap-count {
+  font-size: 11.5px;
+  font-weight: 700;
+  color: var(--text-primary);
+  text-align: right;
+}
+
+/* ================= TRIAGE MODE A HISTORY ================= */
+.triage-history-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 12px;
+  margin-bottom: 16px;
+}
+.triage-history-stat {
+  background: rgba(0,122,255,0.05);
+  border-radius: 10px;
+  padding: 12px;
+  text-align: center;
+}
+.triage-history-val {
+  font-size: 20px;
+  font-weight: 800;
+  color: var(--ios-blue, #007aff);
+}
+.triage-history-lbl {
+  font-size: 10.5px;
+  color: var(--text-tertiary);
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  margin-top: 2px;
+}
+.triage-history-timeline {
+  display: flex;
+  align-items: flex-end;
+  gap: 4px;
+  height: 56px;
+}
+.triage-history-bar {
+  flex: 1;
+  background: var(--ios-sky, #5ac8fa);
+  border-radius: 2px;
+  opacity: 0.8;
+}
+
 .kpi-card {
   background: var(--ios-card-bg);
   backdrop-filter: blur(25px) saturate(190%);

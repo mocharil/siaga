@@ -707,7 +707,7 @@ function pageShell({ crumb, title, desc, actions = "" }) {
 // ---------------------------------------------------------------------------
 
 async function renderOverview(root) {
-  const [metrics, today, top, health, judolRes, pornRes, analytics, trend, caseStudy] = await Promise.all([
+  const [metrics, today, top, health, judolRes, pornRes, analytics, trend, caseStudy, activityFeed, regionalHeatmap] = await Promise.all([
     api("/api/metrics"),
     api("/api/stats/today"),
     api("/api/findings/top?limit=10&unmask=true"),
@@ -717,6 +717,8 @@ async function renderOverview(root) {
     api("/api/stats/analytics"),
     api("/api/stats/trend?days=2"),
     api("/api/insight/case-study").catch(() => ({ available: false })),
+    api("/api/insight/activity-feed?limit=12").catch(() => ({ items: [] })),
+    api("/api/insight/regional-heatmap").catch(() => ({ available: false })),
   ]);
 
   const hijackedTotal = (judolRes?.hijacked_institution_count || 0) + (pornRes?.hijacked_institution_count || 0);
@@ -877,9 +879,69 @@ async function renderOverview(root) {
             </div>
           </div>
         </div>
+
+        ${!caseStudy.secondary ? "" : `
+        <div class="insight-secondary-row">
+          <span class="badge badge-warning">Pembanding: Belum Dieskalasi</span>
+          <div class="insight-secondary-body">
+            Tidak semua temuan naik jadi insiden penuh -- <strong>${esc(caseStudy.secondary.target_brand)}</strong>
+            (${caseStudy.secondary.total_domains} domain, pola kemiripan brand yang sama tanpa bukti infrastruktur bersama)
+            masih berstatus <strong>dipantau</strong>, bukan dieskalasi seperti kasus di atas.
+            ${esc(caseStudy.secondary.note)}
+          </div>
+        </div>
+        `}
       </div>
     </div>
     `}
+
+    <!-- Activity Feed & Regional Estimate -->
+    <div class="two-col">
+      <div class="panel panel-flush">
+        <div class="panel-header-row" style="padding:16px 18px 8px;">
+          <div>
+            <h2 class="section-title">Aktivitas Terkini</h2>
+            <p class="section-desc">Temuan terbaru lintas kategori, diurutkan berdasarkan waktu deteksi</p>
+          </div>
+        </div>
+        <div class="activity-feed-list">
+          ${(activityFeed.items || []).length === 0 ? `<div class="empty-state">Belum ada aktivitas.</div>` : activityFeed.items.map((it) => {
+            const catIcon = it.category === "judol" ? "🎰" : it.category === "porn" ? "🔞" : "🎣";
+            const catLabel = it.category === "judol" ? "Judi Online" : it.category === "porn" ? "Konten Dewasa" : "Phishing";
+            return `
+              <div class="activity-feed-row">
+                <span class="activity-feed-icon">${catIcon}</span>
+                <div class="activity-feed-mid">
+                  <div class="activity-feed-title">${it.brand ? esc(it.brand) : catLabel} <span class="activity-feed-domain">${esc(it.domain_masked)}</span></div>
+                  <div class="activity-feed-time">${fmtDate(it.first_seen)}</div>
+                </div>
+                ${it.risk_score != null ? `<span class="badge ${it.risk_score >= 70 ? "badge-danger" : "badge-warning"}">${it.risk_score}</span>` : ""}
+              </div>
+            `;
+          }).join("")}
+        </div>
+      </div>
+
+      <div class="panel">
+        <div class="panel-header-row">
+          <div>
+            <h2 class="section-title">Estimasi Sebaran Regional</h2>
+            <p class="section-desc">${regionalHeatmap.available ? esc(regionalHeatmap.basis) : "Belum ada data untuk diestimasi."}</p>
+          </div>
+        </div>
+        ${!regionalHeatmap.available ? `<div class="empty-state">Belum cukup data.</div>` : `
+        <div class="region-heatmap-list">
+          ${regionalHeatmap.regions.map((r) => `
+            <div class="region-heatmap-row">
+              <span class="region-heatmap-label">${esc(r.region)}</span>
+              <div class="region-heatmap-track"><div class="region-heatmap-fill" style="width:${r.intensity_pct}%;"></div></div>
+              <span class="region-heatmap-count">~${fmtInt(r.estimated_count)}</span>
+            </div>
+          `).join("")}
+        </div>
+        `}
+      </div>
+    </div>
 
     <!-- 2-Column: Intelligence Streams & 24-Hour Velocity -->
     <div class="two-col">
@@ -1612,6 +1674,8 @@ function getTriageEmptyStateHtml() {
 }
 
 async function renderTriage(root) {
+  const modeAActivity = await api("/api/insight/mode-a-activity").catch(() => ({ available: false }));
+
   root.innerHTML = `
     <div class="page triage-container-page">
       <div class="triage-header-wrapper">
@@ -1736,6 +1800,43 @@ async function renderTriage(root) {
             </div>
           </div>
         </div>
+
+        ${!modeAActivity.available ? "" : `
+        <div class="section" style="margin-top:var(--sp-6);">
+          <div class="panel">
+            <div class="panel-header-row">
+              <div>
+                <h2 class="section-title">Riwayat Penggunaan Mode A</h2>
+                <p class="section-desc">Volume analisis masyarakat lewat Telegram -- hash pesan saja yang tersimpan, teks asli tidak pernah disimpan (UU PDP)</p>
+              </div>
+            </div>
+            <div class="triage-history-grid">
+              <div class="triage-history-stat">
+                <div class="triage-history-val">${fmtInt(modeAActivity.total_analyzed)}</div>
+                <div class="triage-history-lbl">Total Dianalisis</div>
+              </div>
+              <div class="triage-history-stat">
+                <div class="triage-history-val">${fmtInt(modeAActivity.by_level["INDIKASI PENIPUAN"] || 0)}</div>
+                <div class="triage-history-lbl">Indikasi Penipuan</div>
+              </div>
+              <div class="triage-history-stat">
+                <div class="triage-history-val">${modeAActivity.avg_latency_ms != null ? fmtInt(modeAActivity.avg_latency_ms) + " ms" : "—"}</div>
+                <div class="triage-history-lbl">Rata-rata Latensi</div>
+              </div>
+              <div class="triage-history-stat">
+                <div class="triage-history-val">${fmtInt(modeAActivity.reports_drafted)}</div>
+                <div class="triage-history-lbl">Draf Laporan Dibuat</div>
+              </div>
+            </div>
+            <div class="triage-history-timeline">
+              ${modeAActivity.daily_volume.map((d) => {
+                const maxV = Math.max(...modeAActivity.daily_volume.map((x) => x.count), 1);
+                return `<div class="triage-history-bar" style="height:${Math.max(6, Math.round(d.count / maxV * 48))}px;" title="${d.date}: ${d.count} analisis"></div>`;
+              }).join("")}
+            </div>
+          </div>
+        </div>
+        `}
       </div>
     </div>
   `;

@@ -1355,6 +1355,182 @@ def get_case_study():
                     f"dan {blacklisted_now} sudah masuk daftar blacklist publik."
                 ),
             },
+            "secondary": _get_monitoring_case(conn, exclude_campaign_id=campaign["id"]),
+        }
+
+
+def _get_monitoring_case(conn: sqlite3.Connection, exclude_campaign_id: int) -> dict | None:
+    """Finds a smaller 'brand_pattern' cluster (a coincidence-level heuristic,
+    weaker than a shared-nameserver fact -- see lib/campaign.py) still under
+    watch, to contrast against the resolved nameserver case above: not every
+    finding escalates to a full incident-response case.
+    """
+    row = conn.execute(
+        """
+        SELECT id, cluster_key, member_count, first_detected_at
+        FROM campaigns
+        WHERE cluster_type = 'brand_pattern' AND id != ?
+        ORDER BY member_count DESC
+        LIMIT 1
+        """,
+        (exclude_campaign_id,),
+    ).fetchone()
+    if not row:
+        return None
+    members = conn.execute(
+        "SELECT domain, is_live FROM domain_findings WHERE campaign_id = ?",
+        (row["id"],),
+    ).fetchall()
+    if not members:
+        return None
+    return {
+        "target_brand": row["cluster_key"],
+        "total_domains": row["member_count"],
+        "domains_still_live": sum(1 for m in members if m["is_live"]),
+        "first_detected_at": row["first_detected_at"],
+        "status": "monitoring",
+        "note": (
+            f"{row['member_count']} domain berbeda mencatut brand yang sama dalam periode berdekatan, "
+            "namun belum ditemukan bukti infrastruktur bersama -- dipantau sebagai pola, belum dieskalasi "
+            "sebagai satu kampanye."
+        ),
+    }
+
+
+@app.get("/api/insight/activity-feed", summary="Fetch a chronological feed of recent findings across all categories")
+@app.get("/insight/activity-feed", include_in_schema=False)
+def get_activity_feed(limit: int = Query(20, ge=1, le=100)):
+    """Unions the most recent rows from domain_findings, judol_findings, and
+    porn_findings into one time-ordered feed. Every row is a real row already
+    in the active database (real production data, or the demo dataset) --
+    this endpoint does no client-side timer/animation; a "live" feel comes
+    from re-fetching it, not from injecting anything synthetic at request
+    time (see the fabricated live-feed engine removed earlier in this
+    project's history for why that distinction matters).
+    """
+    with get_readonly_connection() as conn:
+        phishing = conn.execute(
+            """
+            SELECT domain, matched_brand AS brand, risk_score, first_seen, 'phishing' AS category
+            FROM domain_findings ORDER BY first_seen DESC LIMIT ?
+            """,
+            (limit,),
+        ).fetchall()
+        judol = conn.execute(
+            """
+            SELECT domain, NULL AS brand, NULL AS risk_score, first_seen, 'judol' AS category
+            FROM judol_findings ORDER BY first_seen DESC LIMIT ?
+            """,
+            (limit,),
+        ).fetchall()
+        porn = conn.execute(
+            """
+            SELECT domain, NULL AS brand, NULL AS risk_score, first_seen, 'porn' AS category
+            FROM porn_findings ORDER BY first_seen DESC LIMIT ?
+            """,
+            (limit,),
+        ).fetchall()
+
+        items = [dict(r) for r in list(phishing) + list(judol) + list(porn)]
+        items.sort(key=lambda r: r["first_seen"] or "", reverse=True)
+        for it in items[:limit]:
+            it["domain_masked"] = mask_domain(it["domain"])
+            del it["domain"]
+        return {"items": items[:limit]}
+
+
+# Rough, publicly-documented regional customer-base weighting for a handful
+# of major Indonesian consumer brands -- NOT attacker or victim geolocation,
+# which SIAGA never collects (see CLAUDE.md privacy rules). Used only to
+# turn "which brand got impersonated how often" into an illustrative
+# regional-exposure estimate for the Overview heatmap. Always labeled
+# "Estimasi" in the UI; never presented as measured location data.
+_BRAND_REGION_WEIGHTS: dict[str, dict[str, float]] = {
+    "Shopee Indonesia": {"DKI Jakarta": 0.22, "Jawa Barat": 0.20, "Jawa Timur": 0.16, "Jawa Tengah": 0.14, "Sumatera Utara": 0.10, "Lainnya": 0.18},
+    "Ruangguru": {"DKI Jakarta": 0.18, "Jawa Barat": 0.24, "Jawa Timur": 0.18, "Jawa Tengah": 0.16, "Sumatera Utara": 0.08, "Lainnya": 0.16},
+    "GoPay Indonesia": {"DKI Jakarta": 0.26, "Jawa Barat": 0.19, "Jawa Timur": 0.15, "Jawa Tengah": 0.12, "Sumatera Utara": 0.11, "Lainnya": 0.17},
+    "Paxel Indonesia": {"DKI Jakarta": 0.24, "Jawa Barat": 0.21, "Jawa Timur": 0.17, "Jawa Tengah": 0.11, "Sumatera Utara": 0.09, "Lainnya": 0.18},
+    "Investree Indonesia": {"DKI Jakarta": 0.30, "Jawa Barat": 0.17, "Jawa Timur": 0.13, "Jawa Tengah": 0.10, "Sumatera Utara": 0.10, "Lainnya": 0.20},
+    "Pos Indonesia": {"DKI Jakarta": 0.15, "Jawa Barat": 0.18, "Jawa Timur": 0.17, "Jawa Tengah": 0.16, "Sumatera Utara": 0.13, "Lainnya": 0.21},
+}
+_DEFAULT_REGION_WEIGHTS = {"DKI Jakarta": 0.20, "Jawa Barat": 0.19, "Jawa Timur": 0.16, "Jawa Tengah": 0.14, "Sumatera Utara": 0.11, "Lainnya": 0.20}
+
+
+@app.get("/api/insight/regional-heatmap", summary="Estimate regional exposure from impersonated-brand customer base weighting")
+@app.get("/insight/regional-heatmap", include_in_schema=False)
+def get_regional_heatmap():
+    """Turns real per-brand finding counts into an ESTIMATED regional
+    exposure ranking. This is not measured location data -- SIAGA has no
+    attacker or victim geolocation pipeline and never will, by privacy
+    design. The estimate exists only to make "who is most exposed" legible
+    at a glance; the UI must always label it as an estimate.
+    """
+    with get_readonly_connection() as conn:
+        rows = conn.execute(
+            "SELECT matched_brand, COUNT(*) AS c FROM domain_findings WHERE matched_brand IS NOT NULL GROUP BY matched_brand"
+        ).fetchall()
+
+    region_totals: dict[str, float] = {}
+    total_findings = 0
+    for r in rows:
+        weights = _BRAND_REGION_WEIGHTS.get(r["matched_brand"], _DEFAULT_REGION_WEIGHTS)
+        total_findings += r["c"]
+        for region, w in weights.items():
+            region_totals[region] = region_totals.get(region, 0.0) + r["c"] * w
+
+    if total_findings == 0:
+        return {"available": False}
+
+    ranked = sorted(region_totals.items(), key=lambda kv: kv[1], reverse=True)
+    max_val = ranked[0][1] if ranked else 1.0
+    return {
+        "available": True,
+        "basis": "Estimasi berdasarkan proporsi basis pengguna brand yang dicatut, bukan lokasi pelaku/korban terverifikasi.",
+        "regions": [
+            {"region": name, "estimated_count": round(val), "intensity_pct": round(val / max_val * 100)}
+            for name, val in ranked
+        ],
+    }
+
+
+@app.get("/api/insight/mode-a-activity", summary="Fetch Mode A (Telegram triage) usage volume and score distribution")
+@app.get("/insight/mode-a-activity", include_in_schema=False)
+def get_mode_a_activity():
+    """Summarizes message_analyses: volume over time and score distribution.
+
+    Never returns message content or a per-row identifier a reader could
+    correlate back to a specific person -- only the hash-only rows the
+    privacy design already stores (see lib/db.py message_analyses and
+    CLAUDE.md privacy rules), aggregated further here.
+    """
+    with get_readonly_connection() as conn:
+        total = conn.execute("SELECT COUNT(*) AS c FROM message_analyses").fetchone()["c"]
+        if total == 0:
+            return {"available": False}
+
+        by_level = conn.execute(
+            "SELECT risk_level, COUNT(*) AS c FROM message_analyses GROUP BY risk_level"
+        ).fetchall()
+        by_day = conn.execute(
+            """
+            SELECT date(received_at) AS d, COUNT(*) AS c
+            FROM message_analyses GROUP BY d ORDER BY d
+            """
+        ).fetchall()
+        avg_latency = conn.execute(
+            "SELECT AVG(latency_ms) AS v FROM message_analyses WHERE latency_ms IS NOT NULL"
+        ).fetchone()["v"]
+        reports_drafted = conn.execute(
+            "SELECT COUNT(*) AS c FROM message_analyses WHERE report_drafted = 1"
+        ).fetchone()["c"]
+
+        return {
+            "available": True,
+            "total_analyzed": total,
+            "by_level": {r["risk_level"]: r["c"] for r in by_level},
+            "daily_volume": [{"date": r["d"], "count": r["c"]} for r in by_day],
+            "avg_latency_ms": round(avg_latency) if avg_latency is not None else None,
+            "reports_drafted": reports_drafted,
         }
 
 
