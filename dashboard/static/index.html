@@ -9,17 +9,12 @@
   <link rel="stylesheet" href="/static/style.css?v=2.5">
 </head>
 <body>
-  <!-- ================= DEMO MODE BANNER =================
-       Hidden by default; only shown by app.js when /api/health reports
-       demo_mode=true (i.e. the server was started with SIAGA_DEMO_MODE=1
-       pointed at data/siaga_demo.db). Every finding shown while this is
-       visible is synthetic -- see docs/demo_mode.md. Deliberately a sibling
-       of .app-shell (not a child) so it never disturbs the topbar/sidebar
-       CSS grid track layout. -->
-  <div class="demo-mode-banner" id="demo-mode-banner" hidden>
-    <span class="demo-mode-banner-icon">🎬</span>
-    <span><strong>MODE DEMO — Data Simulasi.</strong> Seluruh angka dan temuan pada tampilan ini dibuat untuk kebutuhan presentasi produk, bukan data produksi nyata.</span>
-  </div>
+  <!-- Top banner intentionally removed for video recording (kept out per
+       explicit request). The other transparency layer stays: demo-only
+       findings still carry "(Skenario Simulasi)" inline in their own
+       matched_brand/llm_reasoning text, and the regional map/list is still
+       labeled "Estimasi" -- those travel with the data itself even without
+       a page-level banner. See docs/demo_mode.md. -->
   <div class="app-shell" id="app-shell">
     <!-- ================= TOPBAR (iOS Liquid Frosted Glass) ================= -->
     <header class="topbar">

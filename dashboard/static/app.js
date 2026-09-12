@@ -1,6 +1,9 @@
 // ==============================================================================
 // SIAGA Threat Intelligence Platform — iOS / Apple HIG Application Logic
-// Zero External Dependencies · 100% Offline Capable · White & Light Blue Theme
+// White & Light Blue Theme. Offline-capable except the Overview regional
+// map, which loads Leaflet + OpenStreetMap tiles from a CDN (demo-video-
+// showcase branch only, see docs/demo_mode.md) -- everything else runs
+// with zero external network egress.
 // ==============================================================================
 
 const state = {
@@ -14,6 +17,14 @@ const state = {
     live: "all",
     page: 1,
     pageSize: 15,
+  },
+  overview: {
+    page: 1,
+    pageSize: 10,
+  },
+  activityFeed: {
+    page: 1,
+    pageSize: 8,
   },
   pipelineOpen: null,
 };
@@ -744,18 +755,34 @@ function initRegionalLeafletMap(containerId, regions) {
   regions
     .filter((r) => REGION_CENTER_COORDS[r.region])
     .forEach((r) => {
-      const radius = 8 + (r.intensity_pct / maxPct) * 22;
-      L.circleMarker(REGION_CENTER_COORDS[r.region], {
-        radius,
+      const baseRadius = 8 + (r.intensity_pct / maxPct) * 22;
+      const marker = L.circleMarker(REGION_CENTER_COORDS[r.region], {
+        radius: baseRadius,
         color: "#ff3b30",
         weight: 1.5,
         fillColor: "#ff3b30",
         fillOpacity: 0.35,
-      })
-        .addTo(map)
-        .bindPopup(
-          `<strong>${esc(r.region)}</strong><br>Estimasi: ~${fmtInt(r.estimated_count)} temuan`
-        );
+      }).addTo(map);
+
+      marker.bindTooltip(
+        `<strong>${esc(r.region)}</strong><br>Estimasi: ~${fmtInt(r.estimated_count)} temuan`,
+        { direction: "top", offset: [0, -baseRadius] }
+      );
+
+      // Hover: grow + brighten the marker for a tactile feel; click still
+      // opens a pinned popup (useful once the tooltip has been dismissed
+      // by moving the mouse away).
+      marker.on("mouseover", () => {
+        marker.setStyle({ fillOpacity: 0.6, weight: 2.5 });
+        marker.setRadius(baseRadius * 1.15);
+      });
+      marker.on("mouseout", () => {
+        marker.setStyle({ fillOpacity: 0.35, weight: 1.5 });
+        marker.setRadius(baseRadius);
+      });
+      marker.bindPopup(
+        `<strong>${esc(r.region)}</strong><br>Estimasi: ~${fmtInt(r.estimated_count)} temuan`
+      );
     });
 }
 
@@ -767,14 +794,14 @@ async function renderOverview(root) {
   const [metrics, today, top, health, judolRes, pornRes, analytics, trend, caseStudy, activityFeed, regionalHeatmap] = await Promise.all([
     api("/api/metrics"),
     api("/api/stats/today"),
-    api("/api/findings/top?limit=10&unmask=true"),
+    api("/api/findings/top?limit=100&unmask=true"),
     api("/api/health"),
     api("/api/judol?limit=1").catch(() => ({ hijacked_institution_count: 0 })),
     api("/api/porn?limit=1").catch(() => ({ hijacked_institution_count: 0 })),
     api("/api/stats/analytics"),
     api("/api/stats/trend?days=2"),
     api("/api/insight/case-study").catch(() => ({ available: false })),
-    api("/api/insight/activity-feed?limit=12").catch(() => ({ items: [] })),
+    api("/api/insight/activity-feed?limit=60").catch(() => ({ items: [] })),
     api("/api/insight/regional-heatmap").catch(() => ({ available: false })),
   ]);
 
@@ -900,12 +927,16 @@ async function renderOverview(root) {
           <div class="insight-story-step">
             <div class="insight-story-step-lbl">2. Data & Evidence</div>
             <div class="insight-story-step-body">
-              CT Log mendeteksi <strong>${caseStudy.evidence.total_domains} domain baru</strong> mencatut
-              <strong>${esc(caseStudy.evidence.target_brand)}</strong> sejak ${fmtDate(caseStudy.evidence.first_detected_at)}.
+              <p>CT Log mendeteksi <strong>${caseStudy.evidence.total_domains} domain baru</strong> mencatut
+              <strong>${esc(caseStudy.evidence.target_brand)}</strong> sejak ${fmtDate(caseStudy.evidence.first_detected_at)}.</p>
               <div class="insight-mini-timeline">
-                ${caseStudy.evidence.timeline.map((t) => `
-                  <div class="insight-mini-bar" style="height:${Math.max(10, t.count * 10)}px;" title="${t.date}: ${t.count} domain baru"></div>
-                `).join("")}
+                ${(() => {
+                  const counts = caseStudy.evidence.timeline.map((t) => t.count);
+                  const maxCount = Math.max(...counts, 1);
+                  return caseStudy.evidence.timeline.map((t) => `
+                    <div class="insight-mini-bar" style="height:${Math.max(12, Math.round((t.count / maxCount) * 100))}%;" title="${t.date}: ${t.count} domain baru"></div>
+                  `).join("");
+                })()}
               </div>
             </div>
           </div>
@@ -965,22 +996,7 @@ async function renderOverview(root) {
             <span>Monitoring Aktif</span>
           </span>
         </div>
-        <div class="activity-feed-list">
-          ${(activityFeed.items || []).length === 0 ? `<div class="empty-state">Belum ada aktivitas.</div>` : activityFeed.items.map((it) => {
-            const catIcon = it.category === "judol" ? "🎰" : it.category === "porn" ? "🔞" : "🎣";
-            const catLabel = it.category === "judol" ? "Judi Online" : it.category === "porn" ? "Konten Dewasa" : "Phishing";
-            return `
-              <div class="activity-feed-row">
-                <span class="activity-feed-icon">${catIcon}</span>
-                <div class="activity-feed-mid">
-                  <div class="activity-feed-title">${it.brand ? esc(it.brand) : catLabel} <span class="activity-feed-domain">${esc(it.domain_masked)}</span></div>
-                  <div class="activity-feed-time">${fmtDate(it.first_seen)}</div>
-                </div>
-                ${it.risk_score != null ? `<span class="badge ${it.risk_score >= 70 ? "badge-danger" : "badge-warning"}">${it.risk_score}</span>` : ""}
-              </div>
-            `;
-          }).join("")}
-        </div>
+        <div id="overview-activity-feed-wrap"></div>
       </div>
 
       <div class="panel">
@@ -1134,12 +1150,13 @@ async function renderOverview(root) {
   // Populate state.overviewFindings and render initial findings
   state.overviewFindings = [...(top.findings || [])];
   renderOverviewTable(state.overviewFindings);
+  renderActivityFeedList(activityFeed.items || []);
 
   const liveRefreshBtn = document.getElementById("overview-live-refresh-btn");
   if (liveRefreshBtn) {
     liveRefreshBtn.addEventListener("click", async () => {
       try {
-        const fresh = await api("/api/findings/top?limit=10&unmask=true");
+        const fresh = await api("/api/findings/top?limit=100&unmask=true");
         state.overviewFindings = [...(fresh.findings || [])];
         renderOverviewRecentFindings();
         const counterEl = document.getElementById("overview-findings-counter-text");
@@ -1177,13 +1194,29 @@ async function renderOverview(root) {
 // OVERVIEW FINDINGS TABLE & REAL-TIME STREAMING RENDERER
 // ---------------------------------------------------------------------------
 
-function renderOverviewTable(items) {
+function renderOverviewTable(allItems) {
   const findingsWrap = document.getElementById("overview-findings-wrap");
   if (!findingsWrap) return;
-  if (!items || !items.length) {
+  if (!allItems || !allItems.length) {
     findingsWrap.innerHTML = `<div class="empty-state">No findings recorded today.</div>`;
     return;
   }
+
+  const totalItems = allItems.length;
+  const pageSize = state.overview.pageSize || 10;
+  const totalPages = Math.max(1, Math.ceil(totalItems / pageSize));
+  if (state.overview.page > totalPages) state.overview.page = totalPages;
+  if (state.overview.page < 1) state.overview.page = 1;
+  const curPage = state.overview.page;
+  const startIdx = (curPage - 1) * pageSize;
+  const items = allItems.slice(startIdx, startIdx + pageSize);
+
+  const paginationHtml = createPaginationHtml({
+    totalItems,
+    currentPage: curPage,
+    pageSize,
+    idPrefix: "overview",
+  });
 
   findingsWrap.innerHTML = `
     <table class="data-table">
@@ -1241,6 +1274,7 @@ function renderOverviewTable(items) {
         }).join("")}
       </tbody>
     </table>
+    ${paginationHtml}
   `;
 
   findingsWrap.querySelectorAll(".domain-preview-link").forEach((link) => {
@@ -1258,6 +1292,83 @@ function renderOverviewTable(items) {
 
   findingsWrap.querySelectorAll(".btn-inspect").forEach((btn) => {
     btn.addEventListener("click", () => openFindingDrawer(btn.dataset.inspectId, btn.dataset.category || "phishing"));
+  });
+
+  bindPaginationEvents({
+    idPrefix: "overview",
+    currentPage: curPage,
+    pageSize,
+    totalItems,
+    onPageChange: (p) => {
+      state.overview.page = p;
+      renderOverviewTable(allItems);
+    },
+    onPageSizeChange: (s) => {
+      state.overview.pageSize = s;
+      state.overview.page = 1;
+      renderOverviewTable(allItems);
+    },
+  });
+}
+
+function renderActivityFeedList(allItems) {
+  const wrap = document.getElementById("overview-activity-feed-wrap");
+  if (!wrap) return;
+  if (!allItems || !allItems.length) {
+    wrap.innerHTML = `<div class="empty-state">Belum ada aktivitas.</div>`;
+    return;
+  }
+
+  const totalItems = allItems.length;
+  const pageSize = state.activityFeed.pageSize || 8;
+  const totalPages = Math.max(1, Math.ceil(totalItems / pageSize));
+  if (state.activityFeed.page > totalPages) state.activityFeed.page = totalPages;
+  if (state.activityFeed.page < 1) state.activityFeed.page = 1;
+  const curPage = state.activityFeed.page;
+  const startIdx = (curPage - 1) * pageSize;
+  const items = allItems.slice(startIdx, startIdx + pageSize);
+
+  const paginationHtml = createPaginationHtml({
+    totalItems,
+    currentPage: curPage,
+    pageSize,
+    idPrefix: "activity-feed",
+  });
+
+  wrap.innerHTML = `
+    <div class="activity-feed-list">
+      ${items.map((it) => {
+        const catIcon = it.category === "judol" ? "🎰" : it.category === "porn" ? "🔞" : "🎣";
+        const catLabel = it.category === "judol" ? "Judi Online" : it.category === "porn" ? "Konten Dewasa" : "Phishing";
+        return `
+          <div class="activity-feed-row">
+            <span class="activity-feed-icon">${catIcon}</span>
+            <div class="activity-feed-mid">
+              <div class="activity-feed-title">${it.brand ? esc(it.brand) : catLabel} <span class="activity-feed-domain">${esc(it.domain_masked)}</span></div>
+              <div class="activity-feed-time">${fmtDate(it.first_seen)}</div>
+            </div>
+            ${it.risk_score != null ? `<span class="badge ${it.risk_score >= 70 ? "badge-danger" : "badge-warning"}">${it.risk_score}</span>` : ""}
+          </div>
+        `;
+      }).join("")}
+    </div>
+    ${paginationHtml}
+  `;
+
+  bindPaginationEvents({
+    idPrefix: "activity-feed",
+    currentPage: curPage,
+    pageSize,
+    totalItems,
+    onPageChange: (p) => {
+      state.activityFeed.page = p;
+      renderActivityFeedList(allItems);
+    },
+    onPageSizeChange: (s) => {
+      state.activityFeed.pageSize = s;
+      state.activityFeed.page = 1;
+      renderActivityFeedList(allItems);
+    },
   });
 }
 
@@ -5426,9 +5537,6 @@ async function pollHealth() {
     if (feedTag) {
       feedTag.className = `ios-pill ${h.is_healthy ? "ios-pill-success" : "ios-pill-blue"}`;
     }
-
-    const demoBanner = document.getElementById("demo-mode-banner");
-    if (demoBanner) demoBanner.hidden = !h.demo_mode;
   } catch (e) {
     const latencyEl = document.getElementById("sidebar-latency");
     if (latencyEl) latencyEl.textContent = "—";
