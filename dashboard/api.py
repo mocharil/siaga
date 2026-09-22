@@ -391,28 +391,28 @@ def get_advanced_analytics():
                 "name": "Damerau-Levenshtein Typosquatting (Dist=1)",
                 "count": method_counts.get("edit_distance", 0),
                 "pct": round(method_counts.get("edit_distance", 0) / total_findings * 100, 1) if total_findings else 0,
-                "desc": "Penyisipan / penggantian 1 karakter pada nama brand resmi",
+                "desc": "Insertion / substitution of 1 character in the official brand name",
             },
             {
                 "id": "keyword",
                 "name": "Brand Keyword Concatenation",
                 "count": method_counts.get("keyword", 0),
                 "pct": round(method_counts.get("keyword", 0) / total_findings * 100, 1) if total_findings else 0,
-                "desc": "Penggabungan nama brand dengan kata umpan (tarif, resi, login, promo)",
+                "desc": "Combining the brand name with a bait word (rate, receipt, login, promo)",
             },
             {
                 "id": "homoglyph",
                 "name": "Homoglyph & Unicode Substitution",
                 "count": method_counts.get("homoglyph", 0),
                 "pct": round(method_counts.get("homoglyph", 0) / total_findings * 100, 1) if total_findings else 0,
-                "desc": "Penggantian huruf Latin dengan karakter Cyrillic serupa secara visual",
+                "desc": "Replacing Latin letters with visually similar Cyrillic characters",
             },
             {
                 "id": "subdomain",
                 "name": "Subdomain & Permutation Spoofing",
                 "count": method_counts.get("permutation", 0),
                 "pct": round(method_counts.get("permutation", 0) / total_findings * 100, 1) if total_findings else 0,
-                "desc": "Pencatutan brand pada struktur hierarki subdomain",
+                "desc": "Impersonating the brand within a subdomain hierarchy structure",
             },
         ]
 
@@ -447,17 +447,17 @@ def get_advanced_analytics():
         for r in findings:
             brand = (r["matched_brand"] or "").lower()
             if any(b in brand for b in ["bca", "mandiri", "bri", "bni", "cimb", "dana", "ovo", "gopay", "linkaja", "seabank", "jago", "investree", "kredivo", "finmas", "superbank", "nagari", "kalteng", "jatim", "jenius", "pegadaian", "pluang"]):
-                sectors["Perbankan, Fintech & P2P"] += 1
+                sectors["Banking, Fintech & P2P"] += 1
             elif any(b in brand for b in ["pos", "jne", "j&t", "sicepat", "tiki", "anteraja", "paxel"]):
-                sectors["Logistik & Ekspedisi"] += 1
+                sectors["Logistics & Delivery"] += 1
             elif any(b in brand for b in ["shopee", "tokopedia", "lazada", "blibli", "tiktok", "bukalapak", "tiket"]):
                 sectors["E-Commerce & Travel"] += 1
             elif any(b in brand for b in ["ruangguru", "zenius", "pahamify"]):
-                sectors["EdTech & Edukasi"] += 1
+                sectors["EdTech & Education"] += 1
             elif any(b in brand for b in ["pajak", "bansos", "bpjs", "pln", "telkom", "kemenag", "kominfo", "pandi", "pertamina", "kepolisian"]):
-                sectors["BUMN & Institusi Publik"] += 1
+                sectors["State-Owned Enterprises & Public Institutions"] += 1
             else:
-                sectors["Brand Komersial Lainnya"] += 1
+                sectors["Other Commercial Brands"] += 1
 
         sector_list = [
             {"sector": k, "count": v, "pct": round(v / total_findings * 100, 1) if total_findings else 0}
@@ -515,9 +515,9 @@ def get_advanced_analytics():
                 },
                 "lead_time_advantage_hours": (lead_time_hours := _compute_avg_lead_time_hours(conn)),
                 "lead_time_status": (
-                    f"Deteksi dini rata-rata +{lead_time_hours} jam sebelum blacklist publik"
+                    f"Average early detection +{lead_time_hours}h before the public blacklist"
                     if lead_time_hours is not None
-                    else "Belum cukup data (belum ada temuan yang terdaftar di feed publik setelah deteksi)"
+                    else "Not enough data yet (no finding has been listed on the public feed after detection)"
                 ),
             },
         }
@@ -526,7 +526,7 @@ def get_advanced_analytics():
 @app.get("/api/findings/top", summary="Fetch priority domain findings for today")
 @app.get("/findings/top", include_in_schema=False)
 def get_findings_top(
-    limit: int = Query(default=10, ge=1, le=500, description="Max priority findings to return"),
+    limit: int = Query(default=10, ge=1, le=1000, description="Max priority findings to return"),
     unmask: bool = Query(default=False, description="Set True only if unmasked domain is explicitly requested"),
 ):
     """Returns highest risk domain findings with privacy masking applied by default."""
@@ -615,7 +615,7 @@ def get_findings_brands():
 @app.get("/judol", include_in_schema=False)
 def get_judol_findings(
     request: Request,
-    limit: int = Query(default=50, ge=1, le=500, description="Max findings to return"),
+    limit: int = Query(default=50, ge=1, le=1000, description="Max findings to return"),
     unmask: bool = Query(default=False, description="Set True only if unmasked domain is explicitly requested"),
 ):
     """Returns judol keyword-matched domains, with hijacked-institution findings first.
@@ -714,12 +714,12 @@ def get_judol_detail(judol_id: int):
 
         risk_score = 95 if is_hijacked else 85
         risk_level = "INDIKASI PENIPUAN"
-        brand_name = f"Instansi Resmi (.{suffix})" if is_hijacked else "Konten Perjudian Online (Judol)"
+        brand_name = f"Official Institution (.{suffix})" if is_hijacked else "Online Gambling Content (Judol)"
         method_name = f"Subdomain Hijack & Keyword ({', '.join(matched_kws)})" if is_hijacked else f"Keyword Match ({', '.join(matched_kws)})"
         reasoning = (
-            f"Domain instansi resmi pemerintah/akademik (.{suffix}) disusupi subdomain perjudian online ilegal dengan kata kunci: {', '.join(matched_kws)}. Sangat mendesak untuk dilaporkan ke CSIRT dan di-take-down oleh pengelola domain."
+            f"Official government/academic institution domain (.{suffix}) hijacked by an illegal online gambling subdomain with keywords: {', '.join(matched_kws)}. Urgent priority to report to CSIRT and take down via the domain operator."
             if is_hijacked
-            else f"Domain terdeteksi menyebarkan dan mempromosikan situs perjudian online ilegal dengan kata kunci: {', '.join(matched_kws)}."
+            else f"Domain detected distributing and promoting an illegal online gambling site with keywords: {', '.join(matched_kws)}."
         )
         # Ambiguous keywords (toto/bola/domino/...) are only ever flagged
         # after an LLM judgment call, not a deterministic rule -- the report
@@ -727,20 +727,20 @@ def get_judol_detail(judol_id: int):
         # confidence as an unambiguous keyword match.
         if verification_method == "llm":
             reasoning += (
-                f" [Verifikasi AI]: kata kunci ini ambigu di luar konteks judi, dan hanya ditandai "
-                f"setelah dinilai oleh model AI berdasarkan nama domain secara keseluruhan (bukan aturan pasti). "
-                f"Alasan model: {row['llm_reasoning'] or '-'}"
+                f" [AI Verification]: this keyword is ambiguous outside a gambling context, and was only flagged after being assessed "
+                f"by an AI model based on the overall domain name (not a deterministic rule). "
+                f"Model reasoning: {row['llm_reasoning'] or '-'}"
             )
 
         channels = get_recommended_channels(domain, brand_name)
         if is_hijacked and not any("BSSN" in c.name for c in channels):
             channels.append(
                 ReportingChannel(
-                    name="Direktorat Operasi Keamanan Siber BSSN (Gov-CSIRT)",
-                    target_type="Pusat Tanggap Insiden Siber Pemerintah",
+                    name="BSSN Cyber Security Operations Directorate (Gov-CSIRT)",
+                    target_type="Government Cyber Incident Response Center",
                     contact="bantuan70@bssn.go.id | Telp: (021) 78833610 | WA: 0812-8135-4598 (24/7)",
-                    submission_method="Email CSIRT BSSN (bantuan70@bssn.go.id) / Hotline Aduan Siber",
-                    notes=f"Notifikasi insiden peretasan / defacement subdomain instansi .{suffix} untuk penanganan darurat.",
+                    submission_method="BSSN CSIRT Email (bantuan70@bssn.go.id) / Cyber Incident Hotline",
+                    notes=f"Incident notification for hacking / defacement of the .{suffix} institution subdomain, for emergency handling.",
                 )
             )
 
@@ -803,7 +803,7 @@ def get_judol_detail(judol_id: int):
 @app.get("/porn", include_in_schema=False)
 def get_porn_findings(
     request: Request,
-    limit: int = Query(default=50, ge=1, le=500, description="Max findings to return"),
+    limit: int = Query(default=50, ge=1, le=1000, description="Max findings to return"),
     unmask: bool = Query(default=False, description="Set True only if unmasked domain is explicitly requested"),
 ):
     """Returns adult-content keyword-matched domains, with hijacked-institution findings first.
@@ -900,29 +900,29 @@ def get_porn_detail(porn_id: int):
         # matches the same convention already established for judol_findings.
         risk_score = 95 if is_hijacked else 80
         risk_level = "INDIKASI PENIPUAN"
-        brand_name = f"Instansi Resmi (.{suffix})" if is_hijacked else "Konten Pornografi/Dewasa"
+        brand_name = f"Official Institution (.{suffix})" if is_hijacked else "Pornographic/Adult Content"
         method_name = f"Subdomain Hijack & Keyword ({', '.join(matched_kws)})" if is_hijacked else f"Keyword Match ({', '.join(matched_kws)})"
         reasoning = (
-            f"Domain instansi resmi pemerintah/akademik (.{suffix}) disusupi subdomain konten pornografi dengan kata kunci: {', '.join(matched_kws)}. Sangat mendesak untuk dilaporkan ke CSIRT dan di-take-down oleh pengelola domain."
+            f"Official government/academic institution domain (.{suffix}) hijacked by a pornographic content subdomain with keywords: {', '.join(matched_kws)}. Urgent priority to report to CSIRT and take down via the domain operator."
             if is_hijacked
-            else f"Domain terdeteksi menyebarkan konten pornografi dengan kata kunci: {', '.join(matched_kws)}. Kategori ini termasuk cakupan pemblokiran konten negatif Kominfo (Trust+ Positif)."
+            else f"Domain detected distributing pornographic content with keywords: {', '.join(matched_kws)}. This category falls under Kominfo's negative content blocking scope (Trust+ Positif)."
         )
         if verification_method == "llm":
             reasoning += (
-                f" [Verifikasi AI]: kata kunci ini ambigu di luar konteks konten dewasa, dan hanya ditandai "
-                f"setelah dinilai oleh model AI berdasarkan nama domain secara keseluruhan (bukan aturan pasti). "
-                f"Alasan model: {row['llm_reasoning'] or '-'}"
+                f" [AI Verification]: this keyword is ambiguous outside an adult-content context, and was only flagged after being assessed "
+                f"by an AI model based on the overall domain name (not a deterministic rule). "
+                f"Model reasoning: {row['llm_reasoning'] or '-'}"
             )
 
         channels = get_recommended_channels(domain, brand_name)
         if is_hijacked and not any("BSSN" in c.name for c in channels):
             channels.append(
                 ReportingChannel(
-                    name="Direktorat Operasi Keamanan Siber BSSN (Gov-CSIRT)",
-                    target_type="Pusat Tanggap Insiden Siber Pemerintah",
+                    name="BSSN Cyber Security Operations Directorate (Gov-CSIRT)",
+                    target_type="Government Cyber Incident Response Center",
                     contact="bantuan70@bssn.go.id | Telp: (021) 78833610 | WA: 0812-8135-4598 (24/7)",
-                    submission_method="Email CSIRT BSSN (bantuan70@bssn.go.id) / Hotline Aduan Siber",
-                    notes=f"Notifikasi insiden peretasan / defacement subdomain instansi .{suffix} untuk penanganan darurat.",
+                    submission_method="BSSN CSIRT Email (bantuan70@bssn.go.id) / Cyber Incident Hotline",
+                    notes=f"Incident notification for hacking / defacement of the .{suffix} institution subdomain, for emergency handling.",
                 )
             )
 
@@ -1157,7 +1157,7 @@ def get_metrics():
         avg_lead_time_hours = _compute_avg_lead_time_hours(conn)
         lead_time_note: str | None = None
         if avg_lead_time_hours is None:
-            lead_time_note = "belum cukup data (belum ada temuan yang terdaftar di feed publik setelah deteksi)"
+            lead_time_note = "not enough data yet (no finding has been listed on the public feed after detection)"
 
         # Read dynamic metrics from data/eval_results.json
         eval_file = get_eval_results_path()
@@ -1328,8 +1328,8 @@ def get_case_study():
         return {
             "available": True,
             "problem": (
-                f"Lonjakan domain baru mencatut brand '{brand}' terdeteksi dalam waktu singkat, "
-                f"semuanya menggunakan pola urgensi tinggi khas phishing perbankan."
+                f"A surge of new domains impersonating brand '{brand}' was detected within a short window, "
+                f"all using the high-urgency pattern typical of banking phishing."
             ),
             "evidence": {
                 "target_brand": brand,
@@ -1339,20 +1339,20 @@ def get_case_study():
                 "timeline": timeline,
             },
             "insight": (
-                f"Seluruh {total} domain berbagi nameserver yang identik ({campaign['cluster_key']}) -- "
-                f"bukan {total} kejadian terpisah, melainkan satu sindikat yang sama."
+                f"All {total} domains share the identical nameserver ({campaign['cluster_key']}) -- "
+                f"not {total} separate incidents, but a single syndicate."
             ),
             "action": (
-                "Sistem menyiapkan draf laporan RFC 2350 mencakup seluruh anggota klaster sekaligus, "
-                "ditujukan ke Aduan Konten Kominfo dan/atau abuse desk PANDI untuk domain .id."
+                "The system prepares an RFC 2350 report draft covering the entire cluster's members at once, "
+                "addressed to Kominfo Content Complaint and/or the PANDI abuse desk for .id domains."
             ),
             "impact": {
                 "domains_still_live": live_now,
                 "domains_now_in_blacklist": blacklisted_now,
                 "total_domains": total,
                 "summary": (
-                    f"Dari {total} domain klaster ini, {live_now} yang masih aktif merespons saat ini "
-                    f"dan {blacklisted_now} sudah masuk daftar blacklist publik."
+                    f"Of the {total} domains in this cluster, {live_now} are still actively responding right now "
+                    f"and {blacklisted_now} have already been added to the public blacklist."
                 ),
             },
             "secondary": _get_monitoring_case(conn, exclude_campaign_id=campaign["id"]),
@@ -1390,9 +1390,9 @@ def _get_monitoring_case(conn: sqlite3.Connection, exclude_campaign_id: int) -> 
         "first_detected_at": row["first_detected_at"],
         "status": "monitoring",
         "note": (
-            f"{row['member_count']} domain berbeda mencatut brand yang sama dalam periode berdekatan, "
-            "namun belum ditemukan bukti infrastruktur bersama -- dipantau sebagai pola, belum dieskalasi "
-            "sebagai satu kampanye."
+            f"{row['member_count']} different domains impersonating the same brand within a close time window, "
+            "but no evidence of shared infrastructure has been found yet -- monitored as a pattern, not yet escalated "
+            "as a single campaign."
         ),
     }
 
@@ -1446,14 +1446,14 @@ def get_activity_feed(limit: int = Query(20, ge=1, le=100)):
 # regional-exposure estimate for the Overview heatmap. Always labeled
 # "Estimasi" in the UI; never presented as measured location data.
 _BRAND_REGION_WEIGHTS: dict[str, dict[str, float]] = {
-    "Shopee Indonesia": {"DKI Jakarta": 0.22, "Jawa Barat": 0.20, "Jawa Timur": 0.16, "Jawa Tengah": 0.14, "Sumatera Utara": 0.10, "Lainnya": 0.18},
-    "Ruangguru": {"DKI Jakarta": 0.18, "Jawa Barat": 0.24, "Jawa Timur": 0.18, "Jawa Tengah": 0.16, "Sumatera Utara": 0.08, "Lainnya": 0.16},
-    "GoPay Indonesia": {"DKI Jakarta": 0.26, "Jawa Barat": 0.19, "Jawa Timur": 0.15, "Jawa Tengah": 0.12, "Sumatera Utara": 0.11, "Lainnya": 0.17},
-    "Paxel Indonesia": {"DKI Jakarta": 0.24, "Jawa Barat": 0.21, "Jawa Timur": 0.17, "Jawa Tengah": 0.11, "Sumatera Utara": 0.09, "Lainnya": 0.18},
-    "Investree Indonesia": {"DKI Jakarta": 0.30, "Jawa Barat": 0.17, "Jawa Timur": 0.13, "Jawa Tengah": 0.10, "Sumatera Utara": 0.10, "Lainnya": 0.20},
-    "Pos Indonesia": {"DKI Jakarta": 0.15, "Jawa Barat": 0.18, "Jawa Timur": 0.17, "Jawa Tengah": 0.16, "Sumatera Utara": 0.13, "Lainnya": 0.21},
+    "Shopee Indonesia": {"DKI Jakarta": 0.22, "Jawa Barat": 0.20, "Jawa Timur": 0.16, "Jawa Tengah": 0.14, "Sumatera Utara": 0.10, "Other": 0.18},
+    "Ruangguru": {"DKI Jakarta": 0.18, "Jawa Barat": 0.24, "Jawa Timur": 0.18, "Jawa Tengah": 0.16, "Sumatera Utara": 0.08, "Other": 0.16},
+    "GoPay Indonesia": {"DKI Jakarta": 0.26, "Jawa Barat": 0.19, "Jawa Timur": 0.15, "Jawa Tengah": 0.12, "Sumatera Utara": 0.11, "Other": 0.17},
+    "Paxel Indonesia": {"DKI Jakarta": 0.24, "Jawa Barat": 0.21, "Jawa Timur": 0.17, "Jawa Tengah": 0.11, "Sumatera Utara": 0.09, "Other": 0.18},
+    "Investree Indonesia": {"DKI Jakarta": 0.30, "Jawa Barat": 0.17, "Jawa Timur": 0.13, "Jawa Tengah": 0.10, "Sumatera Utara": 0.10, "Other": 0.20},
+    "Pos Indonesia": {"DKI Jakarta": 0.15, "Jawa Barat": 0.18, "Jawa Timur": 0.17, "Jawa Tengah": 0.16, "Sumatera Utara": 0.13, "Other": 0.21},
 }
-_DEFAULT_REGION_WEIGHTS = {"DKI Jakarta": 0.20, "Jawa Barat": 0.19, "Jawa Timur": 0.16, "Jawa Tengah": 0.14, "Sumatera Utara": 0.11, "Lainnya": 0.20}
+_DEFAULT_REGION_WEIGHTS = {"DKI Jakarta": 0.20, "Jawa Barat": 0.19, "Jawa Timur": 0.16, "Jawa Tengah": 0.14, "Sumatera Utara": 0.11, "Other": 0.20}
 
 
 @app.get("/api/insight/regional-heatmap", summary="Estimate regional exposure from impersonated-brand customer base weighting")
@@ -1485,7 +1485,7 @@ def get_regional_heatmap():
     max_val = ranked[0][1] if ranked else 1.0
     return {
         "available": True,
-        "basis": "Estimasi berdasarkan proporsi basis pengguna brand yang dicatut, bukan lokasi pelaku/korban terverifikasi.",
+        "basis": "Estimate based on the impersonated brand's user-base proportions, not a verified attacker/victim location.",
         "regions": [
             {"region": name, "estimated_count": round(val), "intensity_pct": round(val / max_val * 100)}
             for name, val in ranked
@@ -1572,7 +1572,7 @@ def get_health():
         "latest_heartbeat_date": None,
         "latest_heartbeat_ok": None,
         "staleness_hours": None,
-        "issues": ["Database tidak dapat diakses atau healthcheck gagal dijalankan."],
+        "issues": ["Database is unreachable or the healthcheck itself failed to run."],
         "demo_mode": demo_mode,
     }
 

@@ -148,7 +148,7 @@ def test_stats_analytics_endpoint(client):
     # populated (true for this fixture). Real value or honest null -- never
     # a number this test can't actually justify from the fixture data.
     assert data["dual_stream"]["lead_time_advantage_hours"] is None
-    assert "belum cukup data" in data["dual_stream"]["lead_time_status"].lower()
+    assert "not enough data" in data["dual_stream"]["lead_time_status"].lower()
     assert "latency" not in data["deception_tactics"][0]
     assert "peak_window" not in data["hourly_velocity"]
 

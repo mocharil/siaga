@@ -301,6 +301,8 @@ def complete(
             current_prompt = (
                 f"{prompt}\n\n[PERINGATAN]: Output sebelumnya salah ({e}). "
                 f"Wajib keluarkan HANYA JSON valid sesuai skema tanpa teks lain."
+                f"{prompt}\n\n[WARNING]: Previous output failed schema validation ({e}). "
+                f"You MUST output ONLY valid JSON conforming to the schema without any markdown fences or additional text."
             )
 
     raise LLMSchemaError(
@@ -363,7 +365,8 @@ def _heuristic_linguistic_fallback(text: str) -> dict:
         "false_authority": false_authority,
         "prize_bait": prize_bait,
         "dangerous_request": dangerous,
-        "reasoning": "Analisis linguistik berbasis aturan heuristik generik (LLM offline).",
+        "reasoning": "Analisis linguistik berbasis aturan heuristik generik (LLM offline). / Generic rule-based linguistic analysis (LLM offline).",
+        "reasoning": "Generic rule-based linguistic analysis (LLM offline).",
     }
 
 
@@ -388,7 +391,11 @@ def analyze_linguistics(
     else:
         prompt = (
             f"Analisis indikator phishing dalam pesan ini: '{text}'. "
-            f"Kembalikan JSON dengan urgency, false_authority, prize_bait, dangerous_request, reasoning."
+            f"Kembalikan JSON dengan urgency, false_authority, prize_bait, dangerous_request, reasoning "
+            f"(reasoning: satu kalimat bahasa Indonesia diikuti terjemahan Inggrisnya, dipisah ' / ')."
+            f"Analyze phishing and social engineering indicators in this message: '{text}'. "
+            f"Return JSON with urgency, false_authority, prize_bait, dangerous_request, reasoning "
+            f"(reasoning: a concise one-sentence summary in English explaining the threat indicators)."
         )
 
     try:
