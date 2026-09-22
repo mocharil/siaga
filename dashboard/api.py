@@ -38,6 +38,7 @@ from pydantic import BaseModel
 from scripts.healthcheck import check_health
 from lib.scoring import analyze_message
 from lib.report_draft import generate_report_draft, get_recommended_channels, format_report_text, ReportingChannel
+from lib.db import create_schema
 
 logging.basicConfig(
     level=logging.INFO,
@@ -143,29 +144,32 @@ SNAPSHOT_PATH = BASE_DIR / "data" / "siaga_snapshot.json"
 
 
 def load_in_memory_from_snapshot(snapshot_path: Path) -> sqlite3.Connection:
-    """Load JSON snapshot into an in-memory SQLite database for serverless environments."""
+    """Load JSON snapshot into an in-memory SQLite database for serverless environments.
+
+    Scaffolds the FULL real schema first (create_schema(), same one init_db()
+    uses) so every table a real siaga.db would have -- ct_raw, campaigns,
+    judol_findings, porn_findings, message_analyses, etc. -- exists even
+    though the JSON snapshot only ever carries sample rows for 3 of them.
+    Without this, any endpoint querying a table the snapshot doesn't cover
+    (e.g. /api/stats/analytics' COUNT(*) on message_analyses/ct_raw/
+    campaigns) raised "no such table" and crashed the whole request with a
+    500 on Vercel, where there is no real siaga.db file to fall back from.
+    """
     import json
     mem_conn = sqlite3.connect(":memory:")
     mem_conn.row_factory = sqlite3.Row
+    create_schema(mem_conn)
 
     with open(snapshot_path, "r", encoding="utf-8") as f:
         data = json.load(f)
 
     for tbl in ["daily_stats", "domain_findings", "collector_runs"]:
         rows = data.get(tbl, [])
-        if rows:
-            cols = list(rows[0].keys())
+        for r in rows:
+            cols = list(r.keys())
             cols_def = ", ".join([f'"{c}"' for c in cols])
             placeholders = ", ".join(["?"] * len(cols))
-            mem_conn.execute(f'CREATE TABLE IF NOT EXISTS "{tbl}" ({cols_def})')
-            for r in rows:
-                mem_conn.execute(f'INSERT INTO "{tbl}" VALUES ({placeholders})', list(r.values()))
-
-    # Ensure last_status_code column exists in domain_findings if missing in snapshot
-    try:
-        mem_conn.execute('ALTER TABLE domain_findings ADD COLUMN last_status_code INTEGER DEFAULT NULL')
-    except Exception:
-        pass
+            mem_conn.execute(f'INSERT INTO "{tbl}" ({cols_def}) VALUES ({placeholders})', list(r.values()))
 
     mem_conn.commit()
     return mem_conn
