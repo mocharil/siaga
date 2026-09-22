@@ -364,9 +364,9 @@ def run_tiered_pipeline(
             # never depends on the LLM being reachable.
             reasoning_parts = list(scoring_result.reasons)
             if cand.is_live:
-                reasoning_parts.append("Domain terdeteksi aktif merespons (live).")
+                reasoning_parts.append("Domain terdeteksi aktif merespons (live). / Domain detected actively responding (live).")
             if cand.in_blacklist:
-                reasoning_parts.append("Terdaftar dalam blacklist publik URLhaus.")
+                reasoning_parts.append("Terdaftar dalam blacklist publik URLhaus. / Listed in the URLhaus public threat blacklist.")
             reasoning = " ".join(reasoning_parts)
 
             # Optional LLM synthesis: a one-sentence plain-language summary for
@@ -379,7 +379,8 @@ def run_tiered_pipeline(
                     f"lewat metode {cand.match_method}. TLD berisiko: {is_risky_tld}. "
                     f"Status aktif: {cand.is_live}. Terdaftar di blacklist publik: "
                     f"{cand.in_blacklist}. Tulis satu kalimat ringkasan ancaman dalam "
-                    f"bahasa Indonesia awam."
+                    f"bahasa Indonesia awam, diikuti terjemahan Inggrisnya dalam satu "
+                    f"kalimat, dipisah ' / '."
                 )
                 try:
                     llm_result = complete(llm_prompt, DOMAIN_SUMMARY_SCHEMA, db_path=resolved_db)

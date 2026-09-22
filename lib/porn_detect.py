@@ -102,7 +102,9 @@ _LLM_SYSTEM_PROMPT = (
     "Kamu adalah classifier yang HANYA boleh membalas dengan satu objek JSON valid, "
     'persis dua field: {"is_match": true/false, "reasoning": "..."}. '
     "Jangan gunakan nama field lain (jangan 'is_adult_content', 'confidence', 'keyword', dll). "
-    "Jangan tambahkan teks, markdown, atau penjelasan di luar objek JSON itu."
+    "Jangan tambahkan teks, markdown, atau penjelasan di luar objek JSON itu. "
+    "Field reasoning: satu kalimat singkat bahasa Indonesia, diikuti terjemahan Inggrisnya, "
+    "dipisah ' / '."
 )
 
 
@@ -189,8 +191,10 @@ def _verify_ambiguous_with_llm(
         "lain yang ditempel di subdomain acak, lelucon/vandalism, dll)? Jika "
         "ragu atau bukti dari nama domainnya sendiri lemah, jawab false -- "
         "jangan menuduh tanpa indikasi kuat.\n\n"
-        "Balas HANYA dengan JSON persis seperti contoh ini (dua field ini saja):\n"
-        '{"is_match": false, "reasoning": "alasan singkat di sini"}'
+        "Balas HANYA dengan JSON persis seperti contoh ini (dua field ini saja), dengan "
+        "reasoning berisi satu kalimat singkat bahasa Indonesia diikuti terjemahan "
+        "Inggrisnya dipisah ' / ':\n"
+        '{"is_match": false, "reasoning": "alasan singkat di sini / concise reasoning in English"}'
     )
     try:
         result = complete(prompt, _LLM_VERIFY_SCHEMA, system_prompt=_LLM_SYSTEM_PROMPT, db_path=db_path)

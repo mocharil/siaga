@@ -115,7 +115,7 @@ def test_no_false_positives_on_sample_real_domains(shared_watchlist):
         pytest.skip("siaga.db not found for live sampling")
 
     with sqlite3.connect(str(db_path)) as conn:
-        cur = conn.execute("SELECT domain FROM ct_raw ORDER BY id DESC LIMIT 20")
+        cur = conn.execute("SELECT domain FROM ct_raw ORDER BY rowid DESC LIMIT 20")
         sample_domains = [r[0] for r in cur.fetchall()]
 
     if not sample_domains:
